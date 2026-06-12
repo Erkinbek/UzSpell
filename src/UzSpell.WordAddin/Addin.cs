@@ -72,7 +72,15 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
 
     public void OnConnection(object Application, ext_ConnectMode ConnectMode, object AddInInst, ref Array custom)
     {
-        _app = Application;
+        // Ulanishda hech qanday istisno Word'ni yiqitmasligi kerak
+        try
+        {
+            _app = Application;
+        }
+        catch
+        {
+            // jim
+        }
     }
 
     public void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
