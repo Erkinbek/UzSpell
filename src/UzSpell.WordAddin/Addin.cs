@@ -12,7 +12,11 @@ namespace UzSpell.WordAddin;
 [ComVisible(true)]
 [Guid(ClsidString)]
 [ProgId(ProgIdValue)]
-[ClassInterface(ClassInterfaceType.AutoDual)]
+// AutoDispatch (AutoDual EMAS): faqat IDispatch sinf interfeysi yaratiladi.
+// AutoDual dual vtable yaratadi va Word jarayonida CCW yaratishda yiqilardi
+// (ExecutionEngineException). Ribbon callback'lari nom boʻyicha (IDispatch)
+// chaqirilgani uchun AutoDispatch yetarli va barqaror.
+[ClassInterface(ClassInterfaceType.AutoDispatch)]
 public class Addin : IDTExtensibility2, IRibbonExtensibility
 {
     public const string ClsidString = "A1B2C3D4-E5F6-47A8-9B0C-1D2E3F4A5B6C";
@@ -26,7 +30,9 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
     /// </summary>
     static Addin()
     {
+        AddinLog.Write("=== static Addin() boshlandi ===");
         AppDomain.CurrentDomain.AssemblyResolve += ResolveFromAddinFolder;
+        AddinLog.Write($"AssemblyResolve obuna boʻldi; AddinDir={AddinDir}");
     }
 
     private static readonly string AddinDir =
@@ -38,10 +44,13 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
         {
             string name = new AssemblyName(args.Name).Name + ".dll";
             string path = Path.Combine(AddinDir, name);
-            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+            bool exists = File.Exists(path);
+            AddinLog.Write($"Resolve so'raldi: {args.Name} -> {(exists ? path : "TOPILMADI")}");
+            return exists ? Assembly.LoadFrom(path) : null;
         }
-        catch
+        catch (Exception ex)
         {
+            AddinLog.Write("Resolve XATO: " + ex.Message);
             return null;
         }
     }
@@ -72,14 +81,16 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
 
     public void OnConnection(object Application, ext_ConnectMode ConnectMode, object AddInInst, ref Array custom)
     {
+        AddinLog.Write($"OnConnection chaqirildi (mode={ConnectMode})");
         // Ulanishda hech qanday istisno Word'ni yiqitmasligi kerak
         try
         {
             _app = Application;
+            AddinLog.Write("OnConnection: _app saqlandi, OK");
         }
-        catch
+        catch (Exception ex)
         {
-            // jim
+            AddinLog.Write("OnConnection XATO: " + ex.Message);
         }
     }
 
@@ -98,12 +109,18 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
     }
 
     public void OnAddInsUpdate(ref Array custom) { }
-    public void OnStartupComplete(ref Array custom) { }
+    public void OnStartupComplete(ref Array custom) => AddinLog.Write("OnStartupComplete chaqirildi");
     public void OnBeginShutdown(ref Array custom) { }
 
     // ----- IRibbonExtensibility -----
 
-    public string GetCustomUI(string RibbonID) => """
+    public string GetCustomUI(string RibbonID)
+    {
+        AddinLog.Write($"GetCustomUI chaqirildi (RibbonID={RibbonID})");
+        return RibbonXml;
+    }
+
+    private const string RibbonXml = """
         <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui">
           <ribbon>
             <tabs>

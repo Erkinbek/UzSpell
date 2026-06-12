@@ -3,15 +3,17 @@ using System.Runtime.InteropServices;
 namespace UzSpell.WordAddin;
 
 // Office COM add-in interfeyslari — PIA (Primary Interop Assembly) oʻrnatish
-// talab qilinmasligi uchun qoʻlda eʼlon qilingan.
+// talab qilinmasligi uchun qoʻlda eʼlon qilingan. Imzolar rasmiy
+// Extensibility/Office PIA'lariga AYNAN mos.
 //
-// MUHIM tafsilotlar:
-//  - [ComImport] EMAS: bu interfeyslar managed sinfda AMALGA OSHIRILADI.
-//  - InterfaceIsDual: Office OnConnection va boshqalarni ham vtable, ham
-//    IDispatch orqali chaqirishi mumkin — Dual ikkalasini ham qoplaydi.
-//  - [DispId(...)]: Office aynan shu raqamlar bilan chaqiradi (OnConnection=1,
-//    ...). Raqamsiz CLR oʻzicha raqam berib, Word ulana olmay yiqilardi.
-//  - Metod tartibi asl interfeys vtable tartibiga aniq mos kelishi shart.
+// MUHIM tafsilotlar (har biri yiqilishlar evaziga aniqlangan):
+//  - [ComImport] EMAS: interfeyslar managed sinfda amalga oshiriladi.
+//  - InterfaceIsDual + [DispId]: Office ham vtable, ham IDispatch orqali
+//    chaqiradi; DISPID raqamlari rasmiy qiymatlar bilan bir xil boʻlishi shart.
+//  - ref Array parametrlarida [MarshalAs(SafeArray, VT_VARIANT)] MAJBURIY:
+//    Word u yerga native SAFEARRAY(VARIANT)* uzatadi. Atributsiz CLR uni
+//    boshqacha talqin qilib, OnConnection chaqiruvida access violation bilan
+//    butun Word jarayonini yiqitadi (ExecutionEngineException 0x80131506).
 
 public enum ext_ConnectMode
 {
@@ -38,19 +40,24 @@ public interface IDTExtensibility2
         [MarshalAs(UnmanagedType.IDispatch)] object Application,
         ext_ConnectMode ConnectMode,
         [MarshalAs(UnmanagedType.IDispatch)] object AddInInst,
-        ref Array custom);
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
 
     [DispId(2)]
-    void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom);
+    void OnDisconnection(
+        ext_DisconnectMode RemoveMode,
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
 
     [DispId(3)]
-    void OnAddInsUpdate(ref Array custom);
+    void OnAddInsUpdate(
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
 
     [DispId(4)]
-    void OnStartupComplete(ref Array custom);
+    void OnStartupComplete(
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
 
     [DispId(5)]
-    void OnBeginShutdown(ref Array custom);
+    void OnBeginShutdown(
+        [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
 }
 
 /// <summary>Ribbon (lenta) sozlash interfeysi. IID — rasmiy IRibbonExtensibility.</summary>
@@ -60,5 +67,5 @@ public interface IDTExtensibility2
 public interface IRibbonExtensibility
 {
     [DispId(1)]
-    string GetCustomUI(string RibbonID);
+    string GetCustomUI([MarshalAs(UnmanagedType.BStr)] string RibbonID);
 }
