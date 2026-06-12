@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Word COM add-in: .NET Framework 4.8 — Windows tarkibida bor, regasm bilan roʻyxatga olinadi -->
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UzSpell.Core\UzSpell.Core.csproj" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\uz-hunspell\uz_UZ.aff" Link="dictionaries\uz_UZ.aff" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\uz-hunspell\uz_UZ.dic" Link="dictionaries\uz_UZ.dic" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\uz-hunspell\uz_UZ_Cyrl.aff" Link="dictionaries\uz_UZ_Cyrl.aff" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\uz-hunspell\uz_UZ_Cyrl.dic" Link="dictionaries\uz_UZ_Cyrl.dic" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

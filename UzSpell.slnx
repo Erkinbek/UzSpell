@@ -3,5 +3,6 @@
     <Project Path="src/UzSpell.App/UzSpell.App.csproj" />
     <Project Path="src/UzSpell.Cli/UzSpell.Cli.csproj" />
     <Project Path="src/UzSpell.Core/UzSpell.Core.csproj" />
+    <Project Path="src/UzSpell.WordAddin/UzSpell.WordAddin.csproj" />
   </Folder>
 </Solution>
