@@ -69,11 +69,14 @@
                         <DataTemplate>
                             <StackPanel Margin="2,4">
                                 <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ScriptLabel}"
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding KindLabel}"
                                                Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Word}" FontWeight="Bold"
-                                               Foreground="#C62828" FontSize="14"/>
+                                    <TextBlock Text="{Binding DisplayWord}" FontWeight="Bold"
+                                               Foreground="{Binding WordBrush}" FontSize="14"/>
                                 </DockPanel>
+                                <TextBlock Text="{Binding Message}" Foreground="#555" FontSize="12"
+                                           TextWrapping="Wrap" Margin="0,2,0,0"
+                                           Visibility="{Binding MessageVisibility}"/>
                                 <TextBlock Text="{Binding SuggestionsHint}" Foreground="Gray" FontSize="11"
                                            Visibility="{Binding HintVisibility}"/>
                                 <ItemsControl ItemsSource="{Binding Suggestions}" Margin="0,4,0,2">
@@ -98,6 +101,7 @@
                                     <Button Content="➕ Lugʻatga" Padding="7,3"
                                             ToolTip="Soʻzni shaxsiy lugʻatga qoʻshish (doimiy saqlanadi)"
                                             Click="OnAddToDictClick"
+                                            Visibility="{Binding DictButtonVisibility}"
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
                                 </StackPanel>
                             </StackPanel>

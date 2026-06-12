@@ -20,7 +20,8 @@ internal static class WordInterop
     // Word enum qiymatlari
     private const int WdUnderlineNone = 0;
     private const int WdUnderlineWavy = 11;
-    private const int WdColorRed = 255;
+    private const int WdColorRed = 255;        // BGR: 0x0000FF
+    private const int WdColorBlue = 16711680;  // BGR: 0xFF0000
     private const int WdColorAutomatic = -16777216;
     private const int WdFindStop = 0;
     private const int WdReplaceAll = 2;
@@ -51,22 +52,39 @@ internal static class WordInterop
 
     /// <summary>
     /// Hujjatdagi berilgan soʻzning barcha uchrashlarini qizil toʻlqinli chiziq
-    /// bilan belgilaydi. Nechta joy belgilangani qaytariladi.
+    /// bilan belgilaydi (imlo xatosi). Nechta joy belgilangani qaytariladi.
     /// </summary>
     public static int MarkWord(dynamic app, string word) =>
-        SetUnderlineForWord(app, word, WdUnderlineWavy, WdColorRed);
+        SetUnderline(app, word, true, WdUnderlineWavy, WdColorRed);
 
-    /// <summary>Berilgan soʻzdagi belgilashni olib tashlaydi.</summary>
+    /// <summary>
+    /// Berilgan matn parchasini koʻk toʻlqinli chiziq bilan belgilaydi (grammatika).
+    /// </summary>
+    public static int MarkPhrase(dynamic app, string phrase) =>
+        SetUnderline(app, phrase, IsSingleWord(phrase), WdUnderlineWavy, WdColorBlue);
+
+    /// <summary>Berilgan soʻz/parchadagi belgilashni olib tashlaydi.</summary>
     public static int UnmarkWord(dynamic app, string word) =>
-        SetUnderlineForWord(app, word, WdUnderlineNone, WdColorAutomatic);
+        SetUnderline(app, word, IsSingleWord(word), WdUnderlineNone, WdColorAutomatic);
 
-    private static int SetUnderlineForWord(dynamic app, string word, int underline, int color)
+    private static bool IsSingleWord(string text)
     {
+        foreach (char c in text)
+            if (!char.IsLetter(c))
+                return false;
+        return text.Length > 0;
+    }
+
+    private static int SetUnderline(dynamic app, string text, bool wholeWord, int underline, int color)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length > 250)
+            return 0;
+
         dynamic range = app.ActiveDocument.Content;
         dynamic find = range.Find;
         find.ClearFormatting();
-        find.Text = word;
-        find.MatchWholeWord = true;
+        find.Text = text;
+        find.MatchWholeWord = wholeWord;
         find.MatchCase = true;
         find.Forward = true;
         find.Wrap = WdFindStop;
@@ -84,11 +102,14 @@ internal static class WordInterop
     }
 
     /// <summary>
-    /// Soʻzning barcha uchrashlarini yangi soʻzga almashtiradi
+    /// Matnning barcha uchrashlarini yangisiga almashtiradi
     /// (almashtirilgan matndan belgilash olib tashlanadi).
     /// </summary>
     public static void ReplaceAll(dynamic app, string from, string to)
     {
+        if (string.IsNullOrEmpty(from) || from.Length > 250)
+            return;
+
         dynamic find = app.ActiveDocument.Content.Find;
         find.ClearFormatting();
         find.Replacement.ClearFormatting();
@@ -96,7 +117,7 @@ internal static class WordInterop
         find.Replacement.Font.UnderlineColor = WdColorAutomatic;
         find.Text = from;
         find.Replacement.Text = to;
-        find.MatchWholeWord = true;
+        find.MatchWholeWord = IsSingleWord(from);
         find.MatchCase = true;
         find.Forward = true;
         find.Wrap = WdFindStop;

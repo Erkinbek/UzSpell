@@ -10,19 +10,28 @@ namespace UzSpell.App;
 /// </summary>
 public sealed class SquiggleAdorner : Adorner
 {
-    private static readonly Pen WavePen;
+    private static readonly Pen SpellingPen;  // qizil — imlo
+    private static readonly Pen GrammarPen;   // koʻk — grammatika
 
     static SquiggleAdorner()
     {
-        WavePen = new Pen(new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)), 1.4)
+        SpellingPen = new Pen(new SolidColorBrush(Color.FromRgb(0xE5, 0x39, 0x35)), 1.4)
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
         };
-        WavePen.Freeze();
+        SpellingPen.Freeze();
+
+        GrammarPen = new Pen(new SolidColorBrush(Color.FromRgb(0x1E, 0x88, 0xE5)), 1.4)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round,
+        };
+        GrammarPen.Freeze();
     }
 
-    private IReadOnlyList<(int Start, int Length)> _spans = Array.Empty<(int, int)>();
+    private IReadOnlyList<(int Start, int Length)> _spellingSpans = Array.Empty<(int, int)>();
+    private IReadOnlyList<(int Start, int Length)> _grammarSpans = Array.Empty<(int, int)>();
 
     public SquiggleAdorner(TextBox textBox) : base(textBox)
     {
@@ -31,17 +40,20 @@ public sealed class SquiggleAdorner : Adorner
 
     private TextBox Box => (TextBox)AdornedElement;
 
-    public void SetSpans(IReadOnlyList<(int Start, int Length)> spans)
+    public void SetSpans(
+        IReadOnlyList<(int Start, int Length)> spellingSpans,
+        IReadOnlyList<(int Start, int Length)> grammarSpans)
     {
-        _spans = spans;
+        _spellingSpans = spellingSpans;
+        _grammarSpans = grammarSpans;
         InvalidateVisual();
     }
 
-    public void Clear() => SetSpans(Array.Empty<(int, int)>());
+    public void Clear() => SetSpans(Array.Empty<(int, int)>(), Array.Empty<(int, int)>());
 
     protected override void OnRender(DrawingContext dc)
     {
-        if (_spans.Count == 0)
+        if (_spellingSpans.Count == 0 && _grammarSpans.Count == 0)
             return;
 
         var box = Box;
@@ -67,19 +79,8 @@ public sealed class SquiggleAdorner : Adorner
         dc.PushClip(new RectangleGeometry(new Rect(0, 0, box.ActualWidth, box.ActualHeight)));
         try
         {
-            int drawn = 0;
-            foreach (var (start, length) in _spans)
-            {
-                int end = start + length;
-                if (end <= firstVisible || start > lastVisible + 1)
-                    continue;
-                if (end > textLength)
-                    continue; // matn oʻzgargan, eskirgan oraliq
-
-                DrawSpan(dc, start, end);
-                if (++drawn > 800)
-                    break; // koʻrinadigan hudud uchun yetarli
-            }
+            DrawSpanSet(dc, _grammarSpans, GrammarPen, textLength, firstVisible, lastVisible);
+            DrawSpanSet(dc, _spellingSpans, SpellingPen, textLength, firstVisible, lastVisible);
         }
         finally
         {
@@ -87,7 +88,26 @@ public sealed class SquiggleAdorner : Adorner
         }
     }
 
-    private void DrawSpan(DrawingContext dc, int start, int end)
+    private void DrawSpanSet(
+        DrawingContext dc, IReadOnlyList<(int Start, int Length)> spans, Pen pen,
+        int textLength, int firstVisible, int lastVisible)
+    {
+        int drawn = 0;
+        foreach (var (start, length) in spans)
+        {
+            int end = start + length;
+            if (end <= firstVisible || start > lastVisible + 1)
+                continue;
+            if (end > textLength)
+                continue; // matn oʻzgargan, eskirgan oraliq
+
+            DrawSpan(dc, pen, start, end);
+            if (++drawn > 800)
+                break; // koʻrinadigan hudud uchun yetarli
+        }
+    }
+
+    private void DrawSpan(DrawingContext dc, Pen pen, int start, int end)
     {
         var box = Box;
         int i = start;
@@ -115,13 +135,13 @@ public sealed class SquiggleAdorner : Adorner
             Rect r1 = box.GetRectFromCharacterIndex(i);
             Rect r2 = box.GetRectFromCharacterIndex(segEnd - 1, true);
             if (!r1.IsEmpty && !r2.IsEmpty && r2.Right > r1.Left)
-                DrawWave(dc, r1.Left, r2.Right, r1.Bottom - 1.0);
+                DrawWave(dc, pen, r1.Left, r2.Right, r1.Bottom - 1.0);
 
             i = segEnd;
         }
     }
 
-    private static void DrawWave(DrawingContext dc, double x1, double x2, double y)
+    private static void DrawWave(DrawingContext dc, Pen pen, double x1, double x2, double y)
     {
         const double step = 3.0;
         const double amplitude = 1.6;
@@ -139,6 +159,6 @@ public sealed class SquiggleAdorner : Adorner
             }
         }
         geometry.Freeze();
-        dc.DrawGeometry(null, WavePen, geometry);
+        dc.DrawGeometry(null, pen, geometry);
     }
 }

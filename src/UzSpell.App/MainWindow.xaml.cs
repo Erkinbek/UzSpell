@@ -16,7 +16,9 @@ public partial class MainWindow : Window
     private readonly object _gate = new();
     private readonly DispatcherTimer _debounce;
     private readonly string _customWordsPath;
+    private readonly HashSet<string> _ignoredGrammar = new(StringComparer.Ordinal);
 
+    private GrammarChecker? _grammar;
     private SquiggleAdorner? _adorner;
     private int _checkVersion;
     private bool _wordMode;
@@ -80,10 +82,14 @@ public partial class MainWindow : Window
             "Sinab koʻrish uchun: kitobb, hatolik, togri.";
 
         LblStatus.Text = "Lugʻat yuklanmoqda…";
+        string dictDir = Path.Combine(AppContext.BaseDirectory, "dictionaries");
         await Task.Run(() =>
         {
             lock (_gate)
+            {
                 _checker.WarmUp();
+                _grammar = GrammarChecker.CreateFromDictionary(dictDir, _checker);
+            }
         });
         LblStatus.Text = "Tayyor";
         RunCheck();
@@ -108,12 +114,17 @@ public partial class MainWindow : Window
         LblStatus.Text = "Tekshirilmoqda…";
 
         CheckResult result;
+        List<GrammarIssue> grammarIssues;
         try
         {
-            result = await Task.Run(() =>
+            (result, grammarIssues) = await Task.Run(() =>
             {
                 lock (_gate)
-                    return _checker.CheckText(text);
+                {
+                    var spelling = _checker.CheckText(text);
+                    var grammar = _grammar?.Check(text) ?? new List<GrammarIssue>();
+                    return (spelling, grammar);
+                }
             });
         }
         catch (Exception ex)
@@ -135,14 +146,52 @@ public partial class MainWindow : Window
             CheckVersion = version,
         }).ToList();
 
+        foreach (var issue in grammarIssues)
+        {
+            string span = SafeSubstring(text, issue.Start, issue.Length);
+            if (_ignoredGrammar.Contains(GrammarKey(issue.RuleId, span)))
+                continue;
+
+            var item = new ErrorItem
+            {
+                Word = span,
+                Normalized = span,
+                Start = issue.Start,
+                Length = issue.Length,
+                Script = UzbekScript.Latin,
+                IsGrammar = true,
+                RuleId = issue.RuleId,
+                Message = issue.Message,
+                CheckVersion = version,
+            };
+            foreach (var s in issue.Suggestions)
+                item.Suggestions.Add(s);
+            item.SuggestionsLoaded = true;
+            items.Add(item);
+        }
+
+        items.Sort((a, b) => a.Start.CompareTo(b.Start));
+
         LstErrors.ItemsSource = items;
         LblPanelTitle.Text = items.Count > 0 ? $"Xatolar ({items.Count})" : "Xatolar";
-        _adorner?.SetSpans(items.Select(i => (i.Start, i.Length)).ToList());
-        LblStats.Text = $"Soʻzlar: {result.TotalWords} • Xatolar: {items.Count}";
+        _adorner?.SetSpans(
+            items.Where(i => !i.IsGrammar).Select(i => (i.Start, i.Length)).ToList(),
+            items.Where(i => i.IsGrammar).Select(i => (i.Start, i.Length)).ToList());
+        int spellCount = items.Count(i => !i.IsGrammar);
+        LblStats.Text = $"Soʻzlar: {result.TotalWords} • Imlo: {spellCount} • Grammatika: {items.Count - spellCount}";
         LblStatus.Text = "Tayyor";
 
         _ = LoadSuggestionsAsync(items, version);
     }
+
+    private static string SafeSubstring(string text, int start, int length)
+    {
+        if (start < 0 || start >= text.Length)
+            return "";
+        return text.Substring(start, Math.Min(length, text.Length - start));
+    }
+
+    private static string GrammarKey(string ruleId, string span) => ruleId + "|" + span;
 
     private async Task LoadSuggestionsAsync(List<ErrorItem> items, int version)
     {
@@ -208,8 +257,15 @@ public partial class MainWindow : Window
         if (item is null)
             return;
 
-        lock (_gate)
-            _checker.IgnoredWords.Add(item.Normalized);
+        if (item.IsGrammar)
+        {
+            _ignoredGrammar.Add(GrammarKey(item.RuleId ?? "", item.Word));
+        }
+        else
+        {
+            lock (_gate)
+                _checker.IgnoredWords.Add(item.Normalized);
+        }
 
         if (_wordMode)
             RemoveWordItem(item, unmark: true);
@@ -290,8 +346,15 @@ public partial class MainWindow : Window
         if (item is not null)
         {
             IReadOnlyList<string> suggestions;
-            lock (_gate)
-                suggestions = _checker.Suggest(item.Normalized, item.Script);
+            if (item.IsGrammar)
+            {
+                suggestions = item.Suggestions.ToList();
+            }
+            else
+            {
+                lock (_gate)
+                    suggestions = _checker.Suggest(item.Normalized, item.Script);
+            }
 
             if (suggestions.Count == 0)
             {
@@ -322,15 +385,25 @@ public partial class MainWindow : Window
             var ignore = new MenuItem { Header = "Eʼtiborsiz qoldirish" };
             ignore.Click += (_, _) =>
             {
-                lock (_gate)
-                    _checker.IgnoredWords.Add(item.Normalized);
+                if (item.IsGrammar)
+                {
+                    _ignoredGrammar.Add(GrammarKey(item.RuleId ?? "", item.Word));
+                }
+                else
+                {
+                    lock (_gate)
+                        _checker.IgnoredWords.Add(item.Normalized);
+                }
                 RunCheck();
             };
             menu.Items.Add(ignore);
 
-            var addDict = new MenuItem { Header = "Lugʻatga qoʻshish" };
-            addDict.Click += (_, _) => OnAddToDictClick(new Button { Tag = item }, new RoutedEventArgs());
-            menu.Items.Add(addDict);
+            if (!item.IsGrammar)
+            {
+                var addDict = new MenuItem { Header = "Lugʻatga qoʻshish" };
+                addDict.Click += (_, _) => OnAddToDictClick(new Button { Tag = item }, new RoutedEventArgs());
+                menu.Items.Add(addDict);
+            }
 
             menu.Items.Add(new Separator());
         }
@@ -442,10 +515,14 @@ public partial class MainWindow : Window
         Mouse.OverrideCursor = Cursors.Wait;
         try
         {
-            var result = await Task.Run(() =>
+            var (result, grammarIssues) = await Task.Run(() =>
             {
                 lock (_gate)
-                    return _checker.CheckText(docText);
+                {
+                    var spelling = _checker.CheckText(docText);
+                    var grammar = _grammar?.Check(docText) ?? new List<GrammarIssue>();
+                    return (spelling, grammar);
+                }
             });
 
             // Bir xil soʻzlarni birlashtiramiz
@@ -461,13 +538,42 @@ public partial class MainWindow : Window
                 })
                 .ToList();
 
+            // Grammatik xatolar — parcha matni boʻyicha birlashtiramiz
+            foreach (var g in grammarIssues
+                         .GroupBy(i => (i.RuleId, Span: SafeSubstring(docText, i.Start, i.Length))))
+            {
+                string span = g.Key.Span;
+                if (span.Trim().Length == 0 || _ignoredGrammar.Contains(GrammarKey(g.Key.RuleId, span)))
+                    continue;
+
+                var first = g.First();
+                var item = new ErrorItem
+                {
+                    Word = span,
+                    Normalized = span,
+                    Script = UzbekScript.Latin,
+                    IsGrammar = true,
+                    RuleId = first.RuleId,
+                    Message = first.Message,
+                    Occurrences = g.Count(),
+                    CheckVersion = -1,
+                };
+                foreach (var s in first.Suggestions)
+                    item.Suggestions.Add(s);
+                item.SuggestionsLoaded = true;
+                distinct.Add(item);
+            }
+
             int marked = 0;
             foreach (var item in distinct)
             {
-                LblStatus.Text = $"Belgilanmoqda: {item.Word} ({++marked}/{distinct.Count})";
+                LblStatus.Text = $"Belgilanmoqda: {item.DisplayWord} ({++marked}/{distinct.Count})";
                 try
                 {
-                    WordInterop.MarkWord(app, item.Word);
+                    if (item.IsGrammar)
+                        WordInterop.MarkPhrase(app, item.Word);
+                    else
+                        WordInterop.MarkWord(app, item.Word);
                 }
                 catch
                 {
@@ -479,9 +585,10 @@ public partial class MainWindow : Window
             LstErrors.ItemsSource = distinct;
             LblPanelTitle.Text = $"Word hujjatidagi xatolar ({distinct.Count})";
             _adorner?.Clear();
-            LblStats.Text = $"Word: {result.TotalWords} ta soʻz • {result.Errors.Count} ta xato ({distinct.Count} xil soʻz)";
+            int spellCount = distinct.Count(i => !i.IsGrammar);
+            LblStats.Text = $"Word: {result.TotalWords} ta soʻz • Imlo: {spellCount} • Grammatika: {distinct.Count - spellCount}";
             LblStatus.Text = distinct.Count > 0
-                ? "Word hujjatida xatolar qizil toʻlqinli chiziq bilan belgilandi"
+                ? "Word hujjatida xatolar toʻlqinli chiziq bilan belgilandi (qizil — imlo, koʻk — grammatika)"
                 : "Word hujjatida xato topilmadi";
 
             _ = LoadSuggestionsAsync(distinct, _checkVersion);
