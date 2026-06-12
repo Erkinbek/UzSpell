@@ -1,16 +1,17 @@
-# UzSpell — oʻzbek tili uchun oflayn imlo tekshiruvchi
+# UzSpell — oʻzbek tili uchun oflayn imlo va grammatika tekshiruvchi
 
 [uz-hunspell](https://github.com/u2b3k/uz-hunspell) lugʻatlari (95 000+ soʻz, lotin va kirill)
-asosida qurilgan, **100% oflayn** ishlaydigan imlo tekshiruvchi. Internet umuman talab qilinmaydi.
+asosida qurilgan, **100% oflayn** ishlaydigan imlo va grammatika tekshiruvchi. Internet umuman talab qilinmaydi.
 
 ## Tarkibi
 
 | Loyiha | Tavsif |
 |---|---|
-| `src/UzSpell.Core` | Tekshiruv mexanizmi: tokenizer, apostrof normalizatsiyasi, lotin/kirill avto-aniqlash, Hunspell tekshiruvi va takliflar |
-| `src/UzSpell.App` | Oynali dastur (WPF): xatolar qizil toʻlqinli chiziq bilan koʻrsatiladi, takliflar paneli, oʻng tugma menyusi, **MS Word integratsiyasi** |
+| `src/UzSpell.Core` | Tekshiruv mexanizmi: tokenizer, apostrof normalizatsiyasi, lotin/kirill avto-aniqlash, Hunspell imlo tekshiruvi, takliflar va **grammatika qoidalari** |
+| `src/UzSpell.App` | Oynali dastur (WPF): xatolar toʻlqinli chiziq bilan koʻrsatiladi (qizil — imlo, koʻk — grammatika), takliflar paneli, oʻng tugma menyusi, **MS Word integratsiyasi** |
+| `src/UzSpell.WordAddin` | **Word lentasidagi haqiqiy add-in** — «UzSpell» boʻlimi, tugmalar, takliflar oynasi (COM, VSTO talab qilinmaydi) |
 | `src/UzSpell.Cli` | Terminal vositasi: fayl yoki stdin orqali tekshirish |
-| `uz-hunspell/` | Asl lugʻat fayllari (klonlangan repo) |
+| `uz-hunspell/` | Asl lugʻat fayllari (submodule) |
 | `dist/` | Tayyor Release fayllar |
 
 ## Ishga tushirish
@@ -19,58 +20,98 @@ Tayyor fayllar:
 
 - **Oynali dastur:** `dist\UzSpell\UzSpell.exe`
 - **Terminal:** `dist\uzspell-cli\uzspell.exe matn.txt`
+- **Word add-in:** `scripts\install-word-addin.ps1` (pastga qarang)
 
-Manbadan qurish (.NET 10 SDK kerak):
+Manbadan qurish (.NET 10 SDK kerak; Word add-in uchun .NET Framework 4.8 ham):
 
 ```powershell
+git clone --recurse-submodules https://github.com/Erkinbek/UzSpell.git
+cd UzSpell
 dotnet build
-dotnet run --project src\UzSpell.App      # oynali dastur
+dotnet run --project src\UzSpell.App           # oynali dastur
 dotnet run --project src\UzSpell.Cli -- namuna.txt
 ```
 
 ## Imkoniyatlar
 
+### Imlo
 - **Lotin va kirill** yozuvlari, har bir soʻz uchun avtomatik aniqlanadi (yoki qoʻlda tanlanadi)
 - **Apostrof normalizatsiyasi** — `o'zbek`, `o`zbek`, `o‘zbek` kabi yozilishlar ham toʻgʻri deb qabul qilinadi
   (lugʻatdagi kanonik belgilar: `ʻ` U+02BB va tutuq `ʼ` U+02BC); takliflar kanonik koʻrinishda beriladi
-- **Juft soʻzlar** (`katta-katta`) qoʻllab-quvvatlanadi
+- **Juft soʻzlar** (`katta-katta`) va **son shakllari** (`beshta`, `1995-yil`) qoʻllab-quvvatlanadi
 - **Takliflar** — har bir xato uchun 6 tagacha tuzatish varianti
 - **Shaxsiy lugʻat** — `%APPDATA%\UzSpell\custom_words.txt` ga doimiy saqlanadi
-- **.docx oʻqish** — Word fayli matnini Word'siz ham ochib tekshiradi
 - **BOSH HARFLI** qisqartmalar (AQSH, BMT) sukut boʻyicha tekshirilmaydi
 
-## MS Word integratsiyasi
+### Grammatika (gap qurilishi)
+Lugʻatdagi morfologik maʼlumotdan foydalangan, yuqori aniqlikka moʻljallangan qoidalar:
 
-1. Word'da hujjatni oching
-2. UzSpell'da **«📝 Word hujjatini tekshirish»** tugmasini bosing
-3. Xato soʻzlar hujjatda **qizil toʻlqinli chiziq** bilan belgilanadi
-4. Oʻng paneldagi taklif tugmasi bosilsa, soʻz hujjatda **hamma joyda almashtiriladi**
-5. **«🧹 Word belgilarini tozalash»** belgilashlarni olib tashlaydi
+| Qoida | Misol (xato → tuzatish) |
+|---|---|
+| Ega–kesim shaxs-son moslashuvi | *Men maktabga **boradi*** → boraman |
+| Koʻmakchi bilan kelishik | *dars **keyin*** → darsdan keyin · *ariza **muvofiq*** → arizaga muvofiq |
+| Son + ot birlikda | *beshta **olmalar*** → beshta olma |
+| «-mi» yuklamasi qoʻshib | *berdi **mi*** → berdimi |
+| Takror soʻz | *juda **juda*** → juda |
+| Gap bosh harfdan | *…bor. **matn**…* → Matn |
+| Punktuatsiya | belgidan oldin/keyin boʻshliq, ortiqcha boʻshliq |
 
-Integratsiya COM orqali ishlaydi — Word oʻrnatilgan boʻlishi kifoya, qoʻshimcha plagin talab qilinmaydi.
+> Eslatma: grammatika qoidalari shubhali holatlarda ataylab jim qoladi (notoʻgʻri ogohlantirishlardan saqlanish uchun).
+
+## MS Word integratsiyasi — ikki usul
+
+### 1-usul: Word lentasidagi add-in (tavsiya etiladi)
+
+Oʻrnatish (Word yopiq boʻlsin):
+
+```powershell
+dotnet publish src\UzSpell.WordAddin -c Release -o dist\WordAddin -f net48
+powershell -ExecutionPolicy Bypass -File scripts\install-word-addin.ps1
+```
+
+Word'ni oching — lentada **«UzSpell»** boʻlimi paydo boʻladi:
+
+- **Tekshirish** — hujjatni tekshiradi, imlo xatolarini qizil, grammatikani koʻk
+  toʻlqinli chiziq bilan belgilaydi va takliflar oynasini ochadi
+- **Xatolar roʻyxati** — oxirgi natijalar oynasini koʻrsatadi (taklif bosilsa hamma joyda almashtiriladi, ikki marta bosilsa hujjatda topadi)
+- **Belgilarni tozalash** — toʻlqinli belgilashlarni olib tashlaydi
+
+Oʻchirish: `powershell -ExecutionPolicy Bypass -File scripts\uninstall-word-addin.ps1`
+
+> Administrator boʻlsangiz COM sinfi mashina darajasida (HKLM), aks holda joriy
+> foydalanuvchi uchun (HKCU) roʻyxatga olinadi — ikkala holatda ham oddiy Word'da ishlaydi.
+> VSTO yoki Office plagin SDK talab qilinmaydi; faqat Word oʻrnatilgan boʻlsa kifoya.
+
+### 2-usul: oynali dasturdan
+
+UzSpell.exe'da **«📝 Word hujjatini tekshirish»** tugmasi ochiq Word hujjatini
+tekshiradi va xuddi shunday belgilaydi/almashtiradi. `.docx` faylni Word'siz ham oʻqiy oladi.
 
 ## Terminal (CLI)
 
 ```
 uzspell <fayl.txt> [parametrlar]
 
-  --lotin       Faqat lotin lugʻati
-  --kirill      Faqat kirill lugʻati
-  --taklifsiz   Takliflarsiz (tezroq)
-  --allcaps     Qisqartmalarni ham tekshirish
+  --lotin          Faqat lotin lugʻati
+  --kirill         Faqat kirill lugʻati
+  --taklifsiz      Takliflarsiz (tezroq)
+  --allcaps        Qisqartmalarni ham tekshirish
+  --grammatikasiz  Faqat imlo (grammatika qoidalarisiz)
 ```
 
 Chiqish kodi: `0` — xato yoʻq, `1` — xato topildi, `2` — notoʻgʻri chaqiruv.
-Namuna chiqish:
+Namuna chiqish (`[imlo]` va `[gram]` belgilari bilan):
 
 ```
-1:29    Kitobb    → Kitob, Kitoba, Kitobi
-2:20    hatolik   → xatolik
-5:36    togri     → toʻgʻri, togʻi, toʻri
+1:29   [imlo]   Kitobb     → Kitob, Kitoba, Kitobi
+2:20   [imlo]   hatolik    → xatolik
+1:13   [gram]   boradi     Ega («Men») bilan kesim mos kelmayapti → boraman
+3:17   [gram]   olmalar    Sondan keyin ot birlikda → olma
 ```
 
-## Eslatma
+## Texnik eslatma
 
-Hunspell **imlo** (orfografiya) xatolarini aniqlaydi — soʻz lugʻatda bor-yoʻqligini va
-qoʻshimchalar toʻgʻri qoʻshilganini tekshiradi. Gap qurilishi darajasidagi **grammatik**
-tahlil (kelishik moslashuvi, soʻz tartibi) uchun alohida qoidalar mexanizmi kerak boʻladi.
+Imlo tekshiruvi [WeCantSpell.Hunspell](https://www.nuget.org/packages/WeCantSpell.Hunspell)
+(toza .NET, tashqi bogʻliqliksiz) orqali bajariladi. Grammatika qoidalari lugʻatdagi
+soʻz turkumi flaglariga (`X` — feʼl, `V`/`S` — ot/koʻplik) tayanadi. Bu chuqur sintaktik
+tahlil emas, balki keng tarqalgan xatolarni yuqori aniqlik bilan ushlaydigan qoidalar toʻplami.
