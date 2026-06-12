@@ -1,0 +1,3 @@
+[submodule "uz-hunspell"]
+	path = uz-hunspell
+	url = https://github.com/u2b3k/uz-hunspell.git
