@@ -1,3 +1,5 @@
+using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -16,8 +18,55 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
     public const string ClsidString = "A1B2C3D4-E5F6-47A8-9B0C-1D2E3F4A5B6C";
     public const string ProgIdValue = "UzSpell.WordAddin";
 
+    /// <summary>
+    /// MUHIM: COM orqali yuklanganda host jarayonning (Word) papkasi AppBase boʻladi,
+    /// shuning uchun add-in yonidagi bogʻliq DLL'lar (UzSpell.Core, WeCantSpell.Hunspell,
+    /// System.* facade'lar) avtomatik topilmaydi. Shu resolver ularni add-in
+    /// papkasidan yuklaydi — busiz Word add-in'ni yiqitib, «ishonchsiz»ga qoʻyadi.
+    /// </summary>
+    static Addin()
+    {
+        AppDomain.CurrentDomain.AssemblyResolve += ResolveFromAddinFolder;
+    }
+
+    private static readonly string AddinDir =
+        Path.GetDirectoryName(typeof(Addin).Assembly.Location) ?? AppContext.BaseDirectory;
+
+    private static Assembly? ResolveFromAddinFolder(object? sender, ResolveEventArgs args)
+    {
+        try
+        {
+            string name = new AssemblyName(args.Name).Name + ".dll";
+            string path = Path.Combine(AddinDir, name);
+            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private dynamic? _app;
     private ErrorsForm? _form;
+
+    /// <summary>
+    /// Add-in to'g'ri yuklanganini tashqaridan (masalan PowerShell COM orqali)
+    /// tekshirish uchun: lugʻat va grammatikani yuklab, namunani tekshiradi.
+    /// </summary>
+    public string SelfTest()
+    {
+        try
+        {
+            var host = CheckerHost.Instance;
+            var errors = host.CheckDocument(
+                "Men maktabga boradi. Kitobb xato.", out int words);
+            return $"OK: {words} soʻz, {errors.Count} xato topildi";
+        }
+        catch (Exception ex)
+        {
+            return "XATO: " + ex.GetType().Name + ": " + ex.Message;
+        }
+    }
 
     // ----- IDTExtensibility2 -----
 
