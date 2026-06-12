@@ -115,3 +115,19 @@ Imlo tekshiruvi [WeCantSpell.Hunspell](https://www.nuget.org/packages/WeCantSpel
 (toza .NET, tashqi bogʻliqliksiz) orqali bajariladi. Grammatika qoidalari lugʻatdagi
 soʻz turkumi flaglariga (`X` — feʼl, `V`/`S` — ot/koʻplik) tayanadi. Bu chuqur sintaktik
 tahlil emas, balki keng tarqalgan xatolarni yuqori aniqlik bilan ushlaydigan qoidalar toʻplami.
+
+## Minnatdorchilik
+
+- Loyihaning poydevori — [uz-hunspell](https://github.com/u2b3k/uz-hunspell) lugʻatlari.
+  Mualliflar **Alisher "U2B3K" Jalolov** va **Bilolbek "itsbilolbek" Normoʻminov**ga
+  90 000+ soʻzlik lugʻat hamda OT, SIFAT va FEʼL qoʻshimcha qoidalarini ochiq manba
+  qilib ulashganlari uchun katta rahmat — ularsiz bu dastur boʻlmasdi. 🙏
+- [WeCantSpell.Hunspell](https://github.com/aarondandy/WeCantSpell.Hunspell) — Hunspell'ning
+  sof .NET portati uchun Aaron Dandy'ga rahmat.
+
+## Qanday yaratilgan
+
+Loyiha kodi [Claude Code](https://claude.com/claude-code) (Anthropic) yordamida yozilgan —
+**Claude Opus 4.8** va **Claude Fable 5** modellari bilan: arxitektura, imlo/grammatika
+mexanizmi, WPF dastur, Word COM add-in va uning tuzatishlari (SAFEARRAY marshaling,
+DISPID'lar) shu vositada ishlab chiqilgan.
