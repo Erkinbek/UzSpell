@@ -139,6 +139,16 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
                   <button id="uzspellAbout" label="Haqida"
                           imageMso="Info" onAction="OnAbout"/>
                 </group>
+                <group id="uzspellTranslit" label="Transliteratsiya">
+                  <button id="uzspellToCyr" label="Lot→Kir" size="large"
+                          imageMso="TextDirectionContext" onAction="OnToCyrillic"
+                          screentip="Belgilangan matnni lotindan kirillga oʻgirish"
+                          supertip="Avval matnni belgilang, soʻng tugmani bosing. Hech narsa belgilanmagan boʻlsa butun hujjat oʻgiriladi."/>
+                  <button id="uzspellToLat" label="Kir→Lot" size="large"
+                          imageMso="TextDirectionLeftToRight" onAction="OnToLatin"
+                          screentip="Belgilangan matnni kirilldan lotinga oʻgirish"
+                          supertip="Avval matnni belgilang, soʻng tugmani bosing. Hech narsa belgilanmagan boʻlsa butun hujjat oʻgiriladi."/>
+                </group>
               </tab>
             </tabs>
           </ribbon>
@@ -198,6 +208,76 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
         finally
         {
             Cursor.Current = Cursors.Default;
+        }
+    }
+
+    public void OnToCyrillic(object control)
+    {
+        TransliterateSelection(toCyrillic: true);
+    }
+
+    public void OnToLatin(object control)
+    {
+        TransliterateSelection(toCyrillic: false);
+    }
+
+    private void TransliterateSelection(bool toCyrillic)
+    {
+        try
+        {
+            if (_app is null || !WordMarker.HasActiveDocument(_app))
+            {
+                MessageBox.Show("Ochiq hujjat topilmadi.", "UzSpell",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            Func<string, string> convert = toCyrillic
+                ? UzSpell.Core.UzbekTransliterator.ToCyrillic
+                : UzSpell.Core.UzbekTransliterator.ToLatin;
+
+            dynamic sel = _app.Selection;
+            string text = (string)sel.Text;
+
+            if (!string.IsNullOrEmpty(text) && text.Length > 1)
+            {
+                sel.Text = convert(text);
+                return;
+            }
+
+            // Hech narsa belgilanmagan — butun hujjatni soʻrab oʻgiramiz
+            var answer = MessageBox.Show(
+                "Hech narsa belgilanmagan. Butun hujjat " +
+                (toCyrillic ? "kirillga" : "lotinga") + " oʻgirilsinmi?\n\n" +
+                "Eslatma: abzats ichidagi qisman formatlash (qalin soʻzlar va h.k.) yoʻqolishi mumkin.",
+                "UzSpell — transliteratsiya",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes)
+                return;
+
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                dynamic paragraphs = _app.ActiveDocument.Paragraphs;
+                int count = (int)paragraphs.Count;
+                for (int i = 1; i <= count; i++)
+                {
+                    dynamic range = paragraphs.Item(i).Range;
+                    string original = (string)range.Text;
+                    string converted = convert(original);
+                    if (!string.Equals(original, converted, StringComparison.Ordinal))
+                        range.Text = converted;
+                }
+            }
+            finally
+            {
+                Cursor.Current = Cursors.Default;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Oʻgirishda xatolik: " + ex.Message, "UzSpell",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

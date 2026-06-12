@@ -8,6 +8,7 @@ UzbekScript? forcedScript = null;
 bool noSuggestions = false;
 bool checkAllCaps = false;
 bool noGrammar = false;
+string? translit = null; // "kirillga" yoki "lotinga"
 
 foreach (string arg in args)
 {
@@ -27,6 +28,12 @@ foreach (string arg in args)
             break;
         case "--grammatikasiz" or "--no-grammar":
             noGrammar = true;
+            break;
+        case "--kirillga" or "--to-cyrillic":
+            translit = "kirillga";
+            break;
+        case "--lotinga" or "--to-latin":
+            translit = "lotinga";
             break;
         case "--yordam" or "--help" or "-h":
             PrintHelp();
@@ -61,6 +68,15 @@ else
 {
     PrintHelp();
     return 2;
+}
+
+// Transliteratsiya rejimi: tekshirmasdan oʻgirib chiqaradi
+if (translit is not null)
+{
+    Console.Write(translit == "kirillga"
+        ? UzbekTransliterator.ToCyrillic(text)
+        : UzbekTransliterator.ToLatin(text));
+    return 0;
 }
 
 string dictDir = Path.Combine(AppContext.BaseDirectory, "dictionaries");
@@ -140,6 +156,8 @@ static void PrintHelp()
           --taklifsiz      Takliflarsiz, tezroq ishlaydi
           --allcaps        BOSH HARFLI qisqartmalarni ham tekshirish
           --grammatikasiz  Faqat imlo (grammatika qoidalarisiz)
+          --kirillga       Matnni lotindan kirillga oʻgirish (tekshirmasdan)
+          --lotinga        Matnni kirilldan lotinga oʻgirish (tekshirmasdan)
           --yordam         Shu maʼlumotni koʻrsatish
 
         Chiqish kodi: 0 — xato yoʻq, 1 — xato topildi, 2 — notoʻgʻri chaqiruv.

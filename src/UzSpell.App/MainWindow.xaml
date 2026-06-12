@@ -21,6 +21,15 @@
                     <ComboBoxItem Content="Kirill"/>
                 </ComboBox>
                 <Separator/>
+                <Button Click="OnToCyrillic" Padding="8,4"
+                        ToolTip="Belgilangan matnni (yoki butun matnni) lotindan kirillga oʻgirish">
+                    Lot→Kir
+                </Button>
+                <Button Click="OnToLatin" Padding="8,4"
+                        ToolTip="Belgilangan matnni (yoki butun matnni) kirilldan lotinga oʻgirish">
+                    Kir→Lot
+                </Button>
+                <Separator/>
                 <Button Click="OnCheckWordDoc" Padding="8,4"
                         ToolTip="Microsoft Word'da ochiq turgan hujjatni tekshirib, xato soʻzlarni qizil toʻlqinli chiziq bilan belgilaydi">
                     📝 Word hujjatini tekshirish

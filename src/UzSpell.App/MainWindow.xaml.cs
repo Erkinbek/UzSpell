@@ -462,6 +462,31 @@ public partial class MainWindow : Window
         }
     }
 
+    // ----- Transliteratsiya -----
+
+    private void OnToCyrillic(object sender, RoutedEventArgs e) =>
+        Transliterate(UzbekTransliterator.ToCyrillic, "Lotin → kirill oʻgirildi");
+
+    private void OnToLatin(object sender, RoutedEventArgs e) =>
+        Transliterate(UzbekTransliterator.ToLatin, "Kirill → lotin oʻgirildi");
+
+    private void Transliterate(Func<string, string> convert, string statusText)
+    {
+        if (Editor.SelectionLength > 0)
+        {
+            int start = Editor.SelectionStart;
+            string converted = convert(Editor.SelectedText);
+            Editor.SelectedText = converted;
+            Editor.Select(start, converted.Length);
+        }
+        else
+        {
+            Editor.Text = convert(Editor.Text);
+        }
+        Editor.Focus();
+        LblStatus.Text = statusText;
+    }
+
     private void OnScriptChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_checker is null)
