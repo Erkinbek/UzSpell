@@ -7,6 +7,7 @@ string? filePath = null;
 UzbekScript? forcedScript = null;
 bool noSuggestions = false;
 bool checkAllCaps = false;
+bool noGrammar = false;
 
 foreach (string arg in args)
 {
@@ -23,6 +24,9 @@ foreach (string arg in args)
             break;
         case "--allcaps":
             checkAllCaps = true;
+            break;
+        case "--grammatikasiz" or "--no-grammar":
+            noGrammar = true;
             break;
         case "--yordam" or "--help" or "-h":
             PrintHelp();
@@ -68,32 +72,58 @@ var checker = new UzbekSpellChecker(dictDir)
 
 var result = checker.CheckText(text);
 
-// Qator/ustunni bitta oʻtishda hisoblaymiz (xatolar tartiblangan)
-int line = 1, col = 1, pos = 0;
+// Imlo va grammatika xatolarini bitta tartiblangan roʻyxatga yigʻamiz
+var report = new List<(int Start, string Kind, string Shown, string Detail)>();
+
 foreach (var error in result.Errors)
 {
-    while (pos < error.Start)
+    string detail;
+    if (noSuggestions)
+    {
+        detail = "";
+    }
+    else
+    {
+        var suggestions = checker.Suggest(error.Normalized, error.Script);
+        detail = suggestions.Count > 0 ? "→ " + string.Join(", ", suggestions) : "(taklif yoʻq)";
+    }
+    report.Add((error.Start, "imlo", error.Word, detail));
+}
+
+int grammarCount = 0;
+if (!noGrammar)
+{
+    var grammar = GrammarChecker.CreateFromDictionary(dictDir, checker);
+    var issues = grammar.Check(text);
+    grammarCount = issues.Count;
+    foreach (var issue in issues)
+    {
+        string shown = text.Substring(issue.Start, Math.Min(issue.Length, 40)).Replace("\r", "").Replace("\n", " ");
+        string detail = issue.Message;
+        if (issue.Suggestions.Count > 0)
+            detail += " → " + string.Join(", ", issue.Suggestions);
+        report.Add((issue.Start, "gram", shown, detail));
+    }
+}
+
+report.Sort((a, b) => a.Start.CompareTo(b.Start));
+
+// Qator/ustunni bitta oʻtishda hisoblaymiz
+int line = 1, col = 1, pos = 0;
+foreach (var (start, kind, shown, detail) in report)
+{
+    while (pos < start)
     {
         if (text[pos] == '\n') { line++; col = 1; }
         else if (text[pos] != '\r') col++;
         pos++;
     }
-
-    if (noSuggestions)
-    {
-        Console.WriteLine($"{line}:{col}\t{error.Word}");
-    }
-    else
-    {
-        var suggestions = checker.Suggest(error.Normalized, error.Script);
-        string sugg = suggestions.Count > 0 ? string.Join(", ", suggestions) : "(taklif yoʻq)";
-        Console.WriteLine($"{line}:{col}\t{error.Word}\t→ {sugg}");
-    }
+    Console.WriteLine($"{line}:{col}\t[{kind}]\t{shown}\t{detail}");
 }
 
 Console.WriteLine();
-Console.WriteLine($"Jami {result.TotalWords} ta soʻz tekshirildi, {result.Errors.Count} ta xato topildi.");
-return result.Errors.Count > 0 ? 1 : 0;
+Console.WriteLine($"Jami {result.TotalWords} ta soʻz tekshirildi: {result.Errors.Count} ta imlo, {grammarCount} ta grammatika/punktuatsiya xatosi.");
+return report.Count > 0 ? 1 : 0;
 
 static void PrintHelp()
 {
@@ -105,11 +135,12 @@ static void PrintHelp()
           type matn.txt | uzspell
 
         Parametrlar:
-          --lotin       Faqat lotin lugʻatidan foydalanish
-          --kirill      Faqat kirill lugʻatidan foydalanish
-          --taklifsiz   Takliflarsiz, tezroq ishlaydi
-          --allcaps     BOSH HARFLI qisqartmalarni ham tekshirish
-          --yordam      Shu maʼlumotni koʻrsatish
+          --lotin          Faqat lotin lugʻatidan foydalanish
+          --kirill         Faqat kirill lugʻatidan foydalanish
+          --taklifsiz      Takliflarsiz, tezroq ishlaydi
+          --allcaps        BOSH HARFLI qisqartmalarni ham tekshirish
+          --grammatikasiz  Faqat imlo (grammatika qoidalarisiz)
+          --yordam         Shu maʼlumotni koʻrsatish
 
         Chiqish kodi: 0 — xato yoʻq, 1 — xato topildi, 2 — notoʻgʻri chaqiruv.
         """);
