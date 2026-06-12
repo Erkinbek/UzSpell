@@ -12,13 +12,22 @@
 #   dotnet publish src\UzSpell.WordAddin -c Release -o dist\WordAddin -f net48
 
 param(
-    [string]$SourceDir = (Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\WordAddin')
+    [string]$SourceDir
 )
 
 $ErrorActionPreference = 'Stop'
 
 $dllName = 'UzSpell.WordAddin.dll'
 $progId = 'UzSpell.WordAddin'
+
+# Manba papkani aniqlash: parametr -> skript yonida -> repo tartibi (dist\WordAddin)
+if (-not $SourceDir) {
+    if (Test-Path (Join-Path $PSScriptRoot $dllName)) {
+        $SourceDir = $PSScriptRoot
+    } else {
+        $SourceDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'dist\WordAddin'
+    }
+}
 
 if (-not (Test-Path (Join-Path $SourceDir $dllName))) {
     Write-Host "XATO: $SourceDir papkasida $dllName topilmadi." -ForegroundColor Red

@@ -14,7 +14,27 @@ asosida qurilgan, **100% oflayn** ishlaydigan imlo va grammatika tekshiruvchi. I
 | `uz-hunspell/` | Asl lugʻat fayllari (submodule) |
 | `dist/` | Tayyor Release fayllar |
 
-## Ishga tushirish
+## Yuklab olish (internetsiz kompyuterlar uchun ham)
+
+Tayyor ZIP'lar — [**Releases sahifasida**](https://github.com/Erkinbek/UzSpell/releases/latest):
+
+| Fayl | Nima | Talablar |
+|---|---|---|
+| [UzSpell-win-x64.zip](https://github.com/Erkinbek/UzSpell/releases/download/v1.0.0/UzSpell-win-x64.zip) | Oynali dastur | **Hech narsa** — .NET runtime ichida |
+| [UzSpell-WordAddin.zip](https://github.com/Erkinbek/UzSpell/releases/download/v1.0.0/UzSpell-WordAddin.zip) | Word lenta add-in'i | Word + .NET Framework 4.8 (Windows 10/11 da bor) |
+| [uzspell-cli-win-x64.zip](https://github.com/Erkinbek/UzSpell/releases/download/v1.0.0/uzspell-cli-win-x64.zip) | Terminal vositasi | **Hech narsa** — .NET runtime ichida |
+
+Internetsiz kompyuterga oʻrnatish: ZIP'ni fleshkada olib oʻting →
+- **Oynali dastur:** ochib `UzSpell\UzSpell.exe` ni ishga tushiring — oʻrnatish shart emas
+- **Word add-in:** ochilgan papkada `install-word-addin.ps1` ni ishga tushiring:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File install-word-addin.ps1
+  ```
+
+> Eslatma: `dist\` dagi oddiy buildlar .NET 10 oʻrnatilgan boʻlishini talab qiladi.
+> Releases'dagi ZIP'lar esa **self-contained** — hech qanday qoʻshimcha dastursiz ishlaydi.
+
+## Ishga tushirish (manbadan)
 
 Tayyor fayllar:
 
