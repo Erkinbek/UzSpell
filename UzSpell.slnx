@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UzSpell.App/UzSpell.App.csproj" />
+    <Project Path="src/UzSpell.Cli/UzSpell.Cli.csproj" />
+    <Project Path="src/UzSpell.Core/UzSpell.Core.csproj" />
+  </Folder>
+</Solution>
