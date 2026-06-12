@@ -8,3 +8,6 @@ dist/
 .idea/
 *.user
 *.suo
+
+# Word vaqtinchalik lock fayllari
+~$*

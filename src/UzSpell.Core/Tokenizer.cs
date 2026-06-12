@@ -44,7 +44,7 @@ public static class Tokenizer
             }
 
             if (end > start)
-                yield return new Token(text[start..end], start, end - start);
+                yield return new Token(text.Substring(start, end - start), start, end - start);
         }
     }
 

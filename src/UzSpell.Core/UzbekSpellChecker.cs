@@ -121,6 +121,10 @@ public sealed class UzbekSpellChecker
         if (CustomWords.Contains(normalized) || IgnoredWords.Contains(normalized))
             return true;
 
+        // Son + «-ta» shakllari (beshta, ikkita) lugʻatda yoʻq, lekin toʻgʻri
+        if (UzbekNumerals.IsNumeral(normalized.ToLowerInvariant()))
+            return true;
+
         var wordList = GetWordList(script);
         if (wordList is null)
             return true; // lugʻat yoʻq boʻlsa hukm chiqarmaymiz
@@ -131,9 +135,9 @@ public sealed class UzbekSpellChecker
             return true;
 
         // Juft soʻzlar (katta-katta, oz-moz): har bir qismi alohida toʻgʻri boʻlsa qabul qilamiz
-        if (normalized.Contains('-'))
+        if (normalized.IndexOf('-') >= 0)
         {
-            var parts = normalized.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            var parts = normalized.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 1 && parts.All(p => p.Length > 1 && wordList.Check(p)))
                 return true;
         }
