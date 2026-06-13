@@ -48,10 +48,11 @@ function Zip-Source([string]$dst) {
         Add-FileToZip $zip $p $it
       }
     }
-    # Lugʻatlar (uz-hunspell)
+    # Lugʻatlar (uz-hunspell) — build.mjs shulardan dist'ga nusxa oladi
     $dict = (Resolve-Path (Join-Path $root '..\uz-hunspell')).Path.TrimEnd('\')
-    Get-ChildItem -Path $dict -File -Include *.aff, *.dic | ForEach-Object {
-      Add-FileToZip $zip $_.FullName ('uz-hunspell/' + $_.Name)
+    foreach ($d in 'uz_UZ.aff', 'uz_UZ.dic', 'uz_UZ_Cyrl.aff', 'uz_UZ_Cyrl.dic') {
+      $dp = Join-Path $dict $d
+      if (Test-Path $dp) { Add-FileToZip $zip $dp ('uz-hunspell/' + $d) }
     }
   } finally { $zip.Dispose() }
 }
