@@ -37,10 +37,12 @@ async function buildFor(browser, manifest) {
   // JS bundling
   await bundle('popup.js', join(out, 'popup.bundle.js'));
   await bundle('background.js', join(out, 'background.bundle.js'));
+  await bundle('content.js', join(out, 'content.bundle.js'));
 
   // Statik fayllar
   cpSync(join(src, 'popup.html'), join(out, 'popup.html'));
   cpSync(join(src, 'popup.css'), join(out, 'popup.css'));
+  cpSync(join(src, 'content.css'), join(out, 'content.css'));
   cpSync(join(root, 'icons'), join(out, 'icons'), { recursive: true });
 
   // Lugʻatlar
@@ -71,7 +73,7 @@ const firefox = {
   ...base,
   background: { scripts: ['background.bundle.js'] },
   browser_specific_settings: {
-    gecko: { id: 'uzspell@erkinbek.uz', strict_min_version: '115.0' },
+    gecko: { id: 'uzspell@pardayev.uz', strict_min_version: '115.0' },
   },
 };
 

@@ -1,18 +1,56 @@
-// Kontekst menyu: belgilangan matnni lotin <-> kirill oʻgirish.
-// Oʻgirilgan matn tahrirlanadigan maydonga qoʻyiladi; imkonsiz boʻlsa nusxa olinadi.
+// UzSpell fon skripti (Chrome: service worker, Firefox: background page).
+// 1) Kontekst menyu: belgilangan matnni lotin <-> kirill oʻgirish.
+// 2) Dvigatel shu yerda yashaydi: kontent skript yuborgan matnni tekshirib,
+//    xatolar roʻyxatini qaytaradi (har bir sahifada WASM qayta yuklanmaydi).
 import { toCyrillic, toLatin } from './core.js';
+import { createEngine } from './engine.js';
 
 const api = typeof browser !== 'undefined' ? browser : chrome;
+const url = (p) => api.runtime.getURL(p);
 
-api.runtime.onInstalled.addListener(() => {
+// ---------------- Dvigatel (kechiktirilgan) ----------------
+const engine = createEngine({
+  fetchBuf: async (path) => {
+    const res = await fetch(url(path));
+    return new Uint8Array(await res.arrayBuffer());
+  },
+});
+
+// ---------------- Kontekst menyu ----------------
+function buildMenus() {
   api.contextMenus.removeAll(() => {
     api.contextMenus.create({ id: 'uzspell', title: 'UzSpell', contexts: ['selection', 'editable'] });
     api.contextMenus.create({ id: 'uz-cyr', parentId: 'uzspell', title: 'Lotin → Kirill', contexts: ['selection', 'editable'] });
     api.contextMenus.create({ id: 'uz-lat', parentId: 'uzspell', title: 'Kirill → Lotin', contexts: ['selection', 'editable'] });
+    api.contextMenus.create({ id: 'sep', parentId: 'uzspell', type: 'separator', contexts: ['selection', 'editable'] });
+    api.contextMenus.create({
+      id: 'autocheck', parentId: 'uzspell', type: 'checkbox', checked: true,
+      title: 'Inputlarda avtomatik tekshiruv', contexts: ['all'],
+    });
   });
+}
+
+api.runtime.onInstalled.addListener(async () => {
+  buildMenus();
+  // Boshlangʻich holat: avtomatik tekshiruv YOQILGAN
+  const r = await api.storage.local.get('autocheck');
+  if (typeof r.autocheck === 'undefined') await api.storage.local.set({ autocheck: true });
+  syncMenuChecked();
 });
+api.runtime.onStartup?.addListener?.(buildMenus);
+
+async function syncMenuChecked() {
+  try {
+    const r = await api.storage.local.get('autocheck');
+    api.contextMenus.update('autocheck', { checked: r.autocheck !== false });
+  } catch { /* menyu hali yoʻq boʻlishi mumkin */ }
+}
 
 api.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'autocheck') {
+    await api.storage.local.set({ autocheck: !!info.checked });
+    return;
+  }
   if (!info.selectionText || !tab || tab.id == null) return;
   const converted = info.menuItemId === 'uz-cyr'
     ? toCyrillic(info.selectionText)
@@ -30,7 +68,16 @@ api.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Sahifa kontekstida ishlaydigan funksiya
+// ---------------- Kontent skript bilan aloqa ----------------
+api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== 'uzspell-check') return false;
+  engine.check(msg.text || '', { script: msg.script || 'auto' })
+    .then((errors) => sendResponse({ ok: true, errors }))
+    .catch((e) => sendResponse({ ok: false, error: String(e && e.message || e) }));
+  return true; // asinxron javob
+});
+
+// Sahifa kontekstida ishlaydigan funksiya (transliteratsiya almashtirish)
 function replaceSelectionInPage(replacement) {
   const el = document.activeElement;
   if (el && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')) {
@@ -54,6 +101,5 @@ function replaceSelectionInPage(replacement) {
       return;
     }
   }
-  // Tahrirlab boʻlmasa — nusxaga olamiz
   navigator.clipboard.writeText(replacement).catch(() => {});
 }

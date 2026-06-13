@@ -1,9 +1,5 @@
-import { loadModule } from 'hunspell-asm';
-import {
-  toCyrillic, toLatin, tokenize, normalizeToken, detectScript,
-  isNumeral, buildMorphology, SCRIPT_LATIN, SCRIPT_CYRILLIC,
-} from './core.js';
-import { checkGrammar } from './grammar.js';
+import { toCyrillic, toLatin } from './core.js';
+import { createEngine } from './engine.js';
 
 const api = typeof browser !== 'undefined' ? browser : chrome;
 const url = (p) => api.runtime.getURL(p);
@@ -17,57 +13,24 @@ const statusEl = $('status');
 const statsEl = $('stats');
 const scriptSel = $('script');
 
-let latin = null;     // {spell, isCorrect}
-let cyrillic = null;  // {spell, isCorrect}
-let morph = null;
 let ready = false;
 let lastErrors = [];
 const ignored = new Set();
 
-// ---------------- Lugʻat yuklash ----------------
+// Dvigatel — lugʻat fayllarini kengaytma ichidan oʻqiydi
+const engine = createEngine({
+  fetchBuf: async (path) => {
+    const res = await fetch(url(path));
+    return new Uint8Array(await res.arrayBuffer());
+  },
+});
 
-async function fetchBuf(path) {
-  const res = await fetch(url(path));
-  return new Uint8Array(await res.arrayBuffer());
-}
+// ---------------- Ishga tushirish ----------------
 
 async function init() {
   statusEl.textContent = 'Lugʻat yuklanmoqda…';
   try {
-    const factory = await loadModule();
-    const make = async (affPath, dicPath) => {
-      const aff = factory.mountBuffer(await fetchBuf(affPath), affPath.split('/').pop());
-      const dic = factory.mountBuffer(await fetchBuf(dicPath), dicPath.split('/').pop());
-      const spell = factory.create(aff, dic);
-      return spell;
-    };
-    const latSpell = await make('dictionaries/uz_UZ.aff', 'dictionaries/uz_UZ.dic');
-    latin = {
-      spell: latSpell,
-      isCorrect: (w) => {
-        const norm = normalizeToken(w);
-        if (isNumeral(norm.toLowerCase())) return true;
-        if (latSpell.spell(norm)) return true;
-        if (norm.includes('-')) {
-          const parts = norm.split('-').filter(Boolean);
-          if (parts.length > 1 && parts.every((p) => p.length > 1 && latSpell.spell(p))) return true;
-        }
-        return false;
-      },
-    };
-    // Morfologiya — grammatika uchun
-    const dicText = new TextDecoder().decode(await fetchBuf('dictionaries/uz_UZ.dic'));
-    morph = buildMorphology(dicText);
-
-    // Kirill lugʻ ati — kerak boʻlganda (kechiktirilgan)
-    cyrillic = {
-      spell: null,
-      ensure: async () => {
-        if (!cyrillic.spell) cyrillic.spell = await make('dictionaries/uz_UZ_Cyrl.aff', 'dictionaries/uz_UZ_Cyrl.dic');
-        return cyrillic.spell;
-      },
-    };
-
+    await engine.init();
     ready = true;
     statusEl.textContent = 'Tayyor';
     check();
@@ -86,37 +49,7 @@ function escapeHtml(s) {
 async function check() {
   if (!ready) return;
   const text = editor.value;
-  const forced = scriptSel.value;
-  const errors = [];
-
-  // Imlo
-  for (const tok of tokenize(text)) {
-    if (tok.length < 2) continue;
-    if (/^[\p{Lu}]{2,}$/u.test(tok.text)) continue; // BOSH HARFLI qisqartmalar
-    let script = forced === 'auto' ? detectScript(tok.text) : (forced === 'latin' ? SCRIPT_LATIN : SCRIPT_CYRILLIC);
-    if (!script) continue;
-    let engine = latin;
-    if (script === SCRIPT_CYRILLIC) {
-      await cyrillic.ensure();
-      engine = { isCorrect: (w) => cyrillic.spell.spell(w) };
-    }
-    const norm = script === SCRIPT_LATIN ? normalizeToken(tok.text) : tok.text;
-    if (ignored.has(norm)) continue;
-    if (!engine.isCorrect(tok.text)) {
-      const sugs = (script === SCRIPT_LATIN ? latin.spell : cyrillic.spell).suggest(norm).slice(0, 6);
-      errors.push({ type: 'spell', word: tok.text, normalized: norm, start: tok.start, length: tok.length, script, suggestions: sugs });
-    }
-  }
-
-  // Grammatika (lotin)
-  const gIssues = checkGrammar(text, { morph, isCorrect: latin.isCorrect });
-  for (const it of gIssues) {
-    const frag = text.substr(it.start, it.length);
-    if (ignored.has('G:' + it.ruleId + ':' + frag)) continue;
-    errors.push({ type: 'gram', word: frag, start: it.start, length: it.length, message: it.message, suggestions: it.suggestions, ruleId: it.ruleId });
-  }
-
-  errors.sort((a, b) => a.start - b.start);
+  const errors = await engine.check(text, { script: scriptSel.value, ignored });
   lastErrors = errors;
   render(text, errors);
 }
@@ -141,7 +74,7 @@ function render(text, errors) {
     ? 'Xato topilmadi'
     : `Imlo: ${spellCount} · Grammatika: ${errors.length - spellCount}`;
 
-  errors.forEach((e, idx) => {
+  errors.forEach((e) => {
     const div = document.createElement('div');
     div.className = 'err ' + e.type;
     const kind = e.type === 'spell' ? 'imlo' : 'grammatika';

@@ -1,0 +1,24 @@
+/* UzSpell jonli tekshiruv — sahifaga qoʻyiladigan uslublar (manifest orqali, CSPdan ozod). */
+.uzspell-layer{position:fixed;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2147483600;}
+
+.uzspell-mark{position:fixed;pointer-events:auto;cursor:pointer;background-repeat:repeat-x;background-position:left bottom;}
+.uzspell-mark.spell{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='3'><path d='M0 2 L1.5 0.5 L3 2 L4.5 0.5 L6 2' stroke='%23e23b3b' fill='none' stroke-width='0.9'/></svg>");}
+.uzspell-mark.gram{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='3'><path d='M0 2 L1.5 0.5 L3 2 L4.5 0.5 L6 2' stroke='%232b6cff' fill='none' stroke-width='0.9'/></svg>");}
+
+.uzspell-mirror{position:fixed;overflow:hidden;opacity:0;pointer-events:none;z-index:2147483598;
+  white-space:pre-wrap;word-wrap:break-word;color:transparent;margin:0;}
+.uzspell-mirror .e{background:transparent;color:transparent;}
+
+.uzspell-tip{position:fixed;z-index:2147483601;max-width:280px;background:#fff;color:#1a1a1a;border:1px solid #d4d4d8;
+  border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);
+  font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;padding:8px;}
+.uzspell-tip .h{font-size:11px;color:#71717a;margin:0 0 6px;display:flex;gap:6px;align-items:center;}
+.uzspell-tip .h .dot{width:8px;height:8px;border-radius:50%;}
+.uzspell-tip .h .dot.spell{background:#e23b3b;}
+.uzspell-tip .h .dot.gram{background:#2b6cff;}
+.uzspell-tip .msg{color:#3f3f46;margin:0 0 6px;}
+.uzspell-tip button{display:inline-block;margin:2px 4px 2px 0;padding:4px 9px;border:1px solid #d4d4d8;background:#f4f4f5;
+  border-radius:6px;cursor:pointer;font:13px inherit;color:#18181b;}
+.uzspell-tip button:hover{background:#e4e4e7;}
+.uzspell-tip button.ign{color:#71717a;}
+.uzspell-tip .none{color:#a1a1aa;font-style:italic;}

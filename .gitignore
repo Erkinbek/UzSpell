@@ -19,3 +19,5 @@ dist/
 node_modules/
 extension/dist/
 extension/engine-test/
+# Store paketlari (Releases sahifasiga yuklanadi, repo'da emas)
+extension/store/

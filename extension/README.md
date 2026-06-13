@@ -6,12 +6,30 @@ lugʻat va Hunspell dvigateli (WASM) kengaytma ichida.
 
 ## Imkoniyatlar
 
+- **Inputlarda avtomatik tekshiruv (yangi)** — istalgan sahifadagi matn maydoniga
+  (`<textarea>`, `<input>`, `contenteditable`) yozayotganda imlo va grammatika xatolari
+  **avtomatik** tagiga toʻlqinli chiziq bilan chiziladi (imlo — qizil, grammatika — koʻk).
+  Chiziqqa bosilsa — taklif oynasi chiqadi, bir bosishda tuzatadi. Internet talab qilinmaydi.
+  Yoqib/oʻchirish: oʻng tugma → **UzSpell → «Inputlarda avtomatik tekshiruv»**.
 - **Popup tekshiruvchi** — kengaytma belgisini bosing, matn yozing/qoʻying:
   imlo xatolari qizil, grammatika koʻk toʻlqinli chiziq bilan belgilanadi, takliflar beriladi
 - **Transliteratsiya** — popup'da Lot→Kir / Kir→Lot tugmalari
 - **Kontekst menyu** — istalgan sahifada matnni belgilab, oʻng tugma → **UzSpell →
   Lotin↔Kirill**; tahrirlanadigan maydonda almashtiriladi, aks holda nusxaga olinadi
 - Lotin va kirill yozuvlari (avto-aniqlash), 95 000+ soʻzlik uz-hunspell lugʻati
+
+## Qanday ishlaydi (jonli tekshiruv)
+
+Dvigatel (Hunspell WASM + grammatika) **bitta joyda** — fon skriptida (Chrome: service
+worker, Firefox: background page) ishlaydi; shuning uchun har bir sahifada WASM qayta
+yuklanmaydi. Sahifadagi kontent skripti faqat matnni fon skriptiga yuboradi va qaytgan
+xatolarni chizadi:
+
+- `<textarea>`/`<input>` — koʻrinmas «mirror» div orqali har bir xato soʻzning aniq
+  joylashuvi oʻlchanadi va ustiga toʻlqinli chiziq qoʻyiladi (scroll bilan birga suriladi)
+- `contenteditable` — `Range.getClientRects()` orqali xato boʻlaklarining rect'lari topiladi
+
+Uslublar manifest orqali qoʻyilgani uchun qatʼiy CSP'li saytlarda ham ishlaydi.
 
 ## Qurish
 
@@ -34,8 +52,10 @@ Natija: `dist/chrome/` va `dist/firefox/`.
 |---|---|
 | `src/core.js` | Normalizatsiya, tokenizatsiya, transliteratsiya, son shakllari, morfologiya |
 | `src/grammar.js` | Grammatika qoidalari (desktop bilan bir xil) |
-| `src/popup.*` | Tekshiruvchi oyna; hunspell-asm (WASM) bilan imlo |
-| `src/background.js` | Kontekst menyu transliteratsiyasi |
+| `src/engine.js` | Umumiy dvigatel (hunspell-asm WASM + grammatika) — popup va background uchun |
+| `src/popup.*` | Tekshiruvchi oyna |
+| `src/background.js` | Dvigatel + kontekst menyu + `uzspell-check` xabar ishlovchisi |
+| `src/content.js` + `content.css` | Sahifa inputlarida jonli tekshiruv (toʻlqinli chiziq + taklif) |
 | `build.mjs` | esbuild bilan Chrome/Firefox paketlarini yasaydi |
 
 ## Texnik eslatma
