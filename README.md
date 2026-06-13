@@ -7,10 +7,11 @@ asosida qurilgan, **100% oflayn** ishlaydigan imlo va grammatika tekshiruvchi. I
 
 | Loyiha | Tavsif |
 |---|---|
-| `src/UzSpell.Core` | Tekshiruv mexanizmi: tokenizer, apostrof normalizatsiyasi, lotin/kirill avto-aniqlash, Hunspell imlo tekshiruvi, takliflar va **grammatika qoidalari** |
+| `src/UzSpell.Core` | Tekshiruv mexanizmi: tokenizer, apostrof normalizatsiyasi, lotin/kirill avto-aniqlash, Hunspell imlo tekshiruvi, takliflar, **grammatika qoidalari** va **transliteratsiya** |
 | `src/UzSpell.App` | Oynali dastur (WPF): xatolar toʻlqinli chiziq bilan koʻrsatiladi (qizil — imlo, koʻk — grammatika), takliflar paneli, oʻng tugma menyusi, **MS Word integratsiyasi** |
 | `src/UzSpell.WordAddin` | **Word lentasidagi haqiqiy add-in** — «UzSpell» boʻlimi, tugmalar, takliflar oynasi (COM, VSTO talab qilinmaydi) |
 | `src/UzSpell.Cli` | Terminal vositasi: fayl yoki stdin orqali tekshirish |
+| `extension/` | **Chrome/Firefox brauzer kengaytmasi** (oflayn, hunspell-asm WASM) — [batafsil](extension/README.md) |
 | `uz-hunspell/` | Asl lugʻat fayllari (submodule) |
 | `dist/` | Tayyor Release fayllar |
 

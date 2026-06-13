@@ -14,3 +14,8 @@ dist/
 
 # Ikonka generatori chiqishi (uzspell.ico saqlanadi)
 *.preview.png
+
+# Node / brauzer kengaytmasi
+node_modules/
+extension/dist/
+extension/engine-test/

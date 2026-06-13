@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="../icons/icon-32.png" alt="" width="22" height="22">
+    <span class="title">UzSpell</span>
+    <span class="sub">oflayn imlo · grammatika · transliteratsiya</span>
+    <select id="script" title="Yozuv">
+      <option value="auto">Avto</option>
+      <option value="latin">Lotin</option>
+      <option value="cyrillic">Kirill</option>
+    </select>
+  </header>
+
+  <div id="editorWrap">
+    <div id="backdrop"><div id="highlights"></div></div>
+    <textarea id="editor" spellcheck="false" placeholder="Matnni shu yerga yozing yoki qoʻying…"></textarea>
+  </div>
+
+  <div class="toolbar">
+    <button id="btnCheck" class="primary">Tekshirish</button>
+    <button id="btnCyr" title="Lotindan kirillga">Lot→Kir</button>
+    <button id="btnLat" title="Kirilldan lotinga">Kir→Lot</button>
+    <button id="btnCopy" title="Nusxalash">Nusxa</button>
+    <span id="status"></span>
+  </div>
+
+  <div id="results"></div>
+
+  <footer>
+    <span id="stats"></span>
+    <a href="#" id="about">Haqida</a>
+  </footer>
+
+  <script src="popup.bundle.js"></script>
+</body>
+</html>

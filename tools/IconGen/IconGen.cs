@@ -19,8 +19,22 @@ class IconGen
             pngs[i] = RenderPng(Sizes[i]);
         WriteIco(outPath, Sizes, pngs);
         Console.WriteLine("Yaratildi: " + outPath);
-        // Preview (256px)
-        File.WriteAllBytes(Path.ChangeExtension(outPath, ".preview.png"), pngs[Sizes.Length - 1]);
+
+        // Ikkinchi argument berilsa — PNG'larni shu papkaga chiqaramiz (extension uchun)
+        if (args.Length > 1)
+        {
+            string pngDir = args[1];
+            Directory.CreateDirectory(pngDir);
+            foreach (int sz in new[] { 16, 32, 48, 128 })
+            {
+                File.WriteAllBytes(Path.Combine(pngDir, "icon-" + sz + ".png"), RenderPng(sz));
+            }
+            Console.WriteLine("PNG ikonkalar: " + pngDir);
+        }
+        else
+        {
+            File.WriteAllBytes(Path.ChangeExtension(outPath, ".preview.png"), pngs[Sizes.Length - 1]);
+        }
     }
 
     static byte[] RenderPng(int s)

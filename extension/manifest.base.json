@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "UzSpell — oʻzbekcha imlo va transliteratsiya",
+  "version": "1.0.0",
+  "description": "Oʻzbek tili uchun 100% oflayn imlo, grammatika va lotin–kirill transliteratsiya. Internet talab qilinmaydi.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "UzSpell — imlo va transliteratsiya",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "permissions": ["contextMenus", "scripting", "activeTab", "storage"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}
