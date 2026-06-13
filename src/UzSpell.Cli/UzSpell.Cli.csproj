@@ -7,6 +7,11 @@
     <Nullable>enable</Nullable>
     <AssemblyName>uzspell</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <ApplicationIcon>..\UzSpell.App\uzspell.ico</ApplicationIcon>
+    <Version>1.2.0</Version>
+    <Product>UzSpell</Product>
+    <Company>Erkin Pardayev</Company>
+    <Copyright>© 2026 Erkin Pardayev. Lugʻatlar: uz-hunspell (GPL).</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

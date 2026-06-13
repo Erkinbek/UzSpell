@@ -462,6 +462,24 @@ public partial class MainWindow : Window
         }
     }
 
+    // ----- Haqida -----
+
+    private void OnAbout(object sender, RoutedEventArgs e)
+    {
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        string v = version is null ? "" : $"{version.Major}.{version.Minor}.{version.Build}";
+        MessageBox.Show(this,
+            $"UzSpell {v}\n" +
+            "Oʻzbek tili uchun oflayn imlo, grammatika va transliteratsiya\n\n" +
+            "© 2026 Erkin Pardayev\n\n" +
+            "Lugʻatlar: uz-hunspell (Alisher ʻU2B3Kʻ Jalolov,\n" +
+            "Bilolbek Normoʻminov) — GPL litsenziyasi.\n" +
+            "Imlo dvigateli: WeCantSpell.Hunspell.\n\n" +
+            "100% oflayn — internet talab qilinmaydi.\n" +
+            "github.com/Erkinbek/UzSpell",
+            "UzSpell haqida", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     // ----- Transliteratsiya -----
 
     private void OnToCyrillic(object sender, RoutedEventArgs e) =>

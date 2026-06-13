@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         Title="UzSpell — oʻzbekcha imlo tekshiruvchi (oflayn)"
         Height="720" Width="1150" MinHeight="420" MinWidth="700"
+        Icon="uzspell.ico"
         Loaded="OnLoaded">
     <DockPanel>
         <ToolBarTray DockPanel.Dock="Top">
@@ -37,6 +38,10 @@
                 <Button Click="OnClearWordMarks" Padding="8,4"
                         ToolTip="Word hujjatidagi qizil toʻlqinli belgilashlarni olib tashlaydi">
                     🧹 Word belgilarini tozalash
+                </Button>
+                <Separator/>
+                <Button Click="OnAbout" Padding="8,4" ToolTip="Dastur haqida">
+                    ℹ Haqida
                 </Button>
             </ToolBar>
         </ToolBarTray>

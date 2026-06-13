@@ -11,3 +11,6 @@ dist/
 
 # Word vaqtinchalik lock fayllari
 ~$*
+
+# Ikonka generatori chiqishi (uzspell.ico saqlanadi)
+*.preview.png

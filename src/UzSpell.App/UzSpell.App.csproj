@@ -7,10 +7,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AssemblyName>UzSpell</AssemblyName>
+    <ApplicationIcon>uzspell.ico</ApplicationIcon>
+    <Version>1.2.0</Version>
+    <Product>UzSpell</Product>
+    <Company>Erkin Pardayev</Company>
+    <Copyright>© 2026 Erkin Pardayev. Lugʻatlar: uz-hunspell (GPL).</Copyright>
+    <Description>Oʻzbek tili uchun oflayn imlo, grammatika va transliteratsiya</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\UzSpell.Core\UzSpell.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="uzspell.ico" />
   </ItemGroup>
 
   <ItemGroup>

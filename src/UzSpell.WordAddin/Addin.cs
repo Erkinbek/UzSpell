@@ -284,10 +284,14 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
     public void OnAbout(object control)
     {
         MessageBox.Show(
-            "UzSpell — oʻzbek tili uchun imlo va grammatika tekshiruvchisi.\n\n" +
+            "UzSpell — oʻzbek tili uchun imlo, grammatika va transliteratsiya.\n\n" +
             "• 100% oflayn — internet talab qilinmaydi\n" +
             "• Lotin va kirill yozuvlari\n" +
             "• uz-hunspell lugʻatlari (95 000+ soʻz) asosida\n\n" +
+            "© 2026 Erkin Pardayev\n" +
+            "Lugʻatlar: uz-hunspell (Alisher 'U2B3K' Jalolov,\n" +
+            "Bilolbek Normoʻminov) — GPL litsenziyasi.\n" +
+            "Imlo dvigateli: WeCantSpell.Hunspell.\n\n" +
             "github.com/Erkinbek/UzSpell",
             "UzSpell haqida", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
