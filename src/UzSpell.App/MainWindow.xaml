@@ -40,6 +40,9 @@
                     🧹 Word belgilarini tozalash
                 </Button>
                 <Separator/>
+                <Button Click="OnSettings" Padding="8,4" ToolTip="Sozlamalar (yozuv, grammatika, takliflar soni)">
+                    ⚙ Sozlamalar
+                </Button>
                 <Button Click="OnAbout" Padding="8,4" ToolTip="Dastur haqida">
                     ℹ Haqida
                 </Button>
@@ -107,17 +110,22 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Content="Eʼtiborsiz" Padding="7,3" Margin="0,0,4,0"
-                                            ToolTip="Bu soʻzni shu sessiyada xato deb hisoblamaslik"
+                                <WrapPanel>
+                                    <Button Content="Bir marta" Padding="7,3" Margin="0,0,4,4"
+                                            ToolTip="Faqat shu joydagi xatoni eʼtiborsiz qoldirish"
+                                            Click="OnIgnoreOnceClick"
+                                            Visibility="{Binding IgnoreOnceVisibility}"
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
+                                    <Button Content="Hammasi" Padding="7,3" Margin="0,0,4,4"
+                                            ToolTip="Bu soʻzni/xatoni shu sessiyada eʼtiborsiz qoldirish"
                                             Click="OnIgnoreClick"
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                                    <Button Content="➕ Lugʻatga" Padding="7,3"
+                                    <Button Content="➕ Lugʻatga" Padding="7,3" Margin="0,0,4,4"
                                             ToolTip="Soʻzni shaxsiy lugʻatga qoʻshish (doimiy saqlanadi)"
                                             Click="OnAddToDictClick"
                                             Visibility="{Binding DictButtonVisibility}"
                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"/>
-                                </StackPanel>
+                                </WrapPanel>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

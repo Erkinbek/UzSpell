@@ -1,0 +1,63 @@
+{
+  "name": "uzspell-vscode",
+  "displayName": "UzSpell — oʻzbekcha imlo, grammatika, transliteratsiya",
+  "description": "Oʻzbek tili (lotin va kirill) uchun 100% oflayn imlo va grammatika tekshiruvchi hamda lotin⇄kirill transliteratsiya. uz-hunspell lugʻatlari asosida.",
+  "version": "1.0.0",
+  "publisher": "pardayev",
+  "license": "GPL-3.0",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Linters", "Other"],
+  "keywords": ["uzbek", "oʻzbek", "imlo", "spell", "hunspell", "kirill", "transliteration"],
+  "repository": { "type": "git", "url": "https://github.com/Erkinbek/UzSpell" },
+  "main": "./dist/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "uzspell.checkDocument", "title": "UzSpell: Hujjatni tekshirish" },
+      { "command": "uzspell.toCyrillic", "title": "UzSpell: Lotindan kirillga oʻgirish" },
+      { "command": "uzspell.toLatin", "title": "UzSpell: Kirilldan lotinga oʻgirish" },
+      { "command": "uzspell.toggle", "title": "UzSpell: Tekshiruvni yoqish/oʻchirish" }
+    ],
+    "configuration": {
+      "title": "UzSpell",
+      "properties": {
+        "uzspell.enable": {
+          "type": "boolean", "default": true,
+          "description": "Imlo/grammatika tekshiruvini yoqish."
+        },
+        "uzspell.script": {
+          "type": "string", "enum": ["auto", "latin", "cyrillic"], "default": "auto",
+          "description": "Yozuv: avto-aniqlash, faqat lotin yoki faqat kirill."
+        },
+        "uzspell.grammar": {
+          "type": "boolean", "default": true,
+          "description": "Grammatika qoidalarini ham tekshirish (lotin)."
+        },
+        "uzspell.checkAllCaps": {
+          "type": "boolean", "default": false,
+          "description": "BOSH HARFLI qisqartmalarni (AQSH, BMT) ham tekshirish."
+        },
+        "uzspell.maxSuggestions": {
+          "type": "number", "default": 6, "minimum": 1, "maximum": 15,
+          "description": "Har bir xato uchun koʻrsatiladigan takliflar soni."
+        },
+        "uzspell.languages": {
+          "type": "array", "items": { "type": "string" },
+          "default": ["plaintext", "markdown"],
+          "description": "Qaysi fayl turlarida tekshirilsin (masalan plaintext, markdown, latex)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "vscode:prepublish": "node build.mjs"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "esbuild": "^0.28.1"
+  },
+  "dependencies": {
+    "hunspell-asm": "^4.0.2"
+  }
+}

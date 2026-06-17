@@ -1,0 +1,40 @@
+﻿UzSpell — brauzer kengaytmasini oʻrnatish
+==========================================
+
+Brauzer kengaytmalarini xavfsizlik sababli oʻrnatuvchi avtomatik yoqa
+olmaydi — ularni brauzerga qoʻlda ulash kerak. Bu bir martalik amal.
+
+Kerakli fayllar shu papkada:
+  - chrome\   (Google Chrome, Edge, Brave, Opera va boshqa Chromium brauzerlar)
+  - firefox\  (Mozilla Firefox)
+
+
+GOOGLE CHROME / EDGE / BRAVE / OPERA
+------------------------------------
+1. Brauzerda manzil qatoriga yozing:   chrome://extensions
+   (Edge'da: edge://extensions)
+2. Oʻng yuqoridagi "Developer mode" (Dasturchi rejimi) tugmasini yoqing.
+3. "Load unpacked" (Ochilgan koʻrinishda yuklash) tugmasini bosing.
+4. Shu papkadagi  chrome  papkasini tanlang.
+5. Tayyor — manzil qatori yonida UzSpell belgisi paydo boʻladi.
+
+
+MOZILLA FIREFOX
+---------------
+Vaqtinchalik (har ishga tushganda qayta yuklash kerak):
+1. Manzil qatoriga yozing:   about:debugging#/runtime/this-firefox
+2. "Load Temporary Add-on..." tugmasini bosing.
+3. firefox papkasidagi  manifest.json  faylini tanlang.
+
+Doimiy oʻrnatish uchun kengaytma imzolangan boʻlishi kerak (Mozilla AMO
+orqali). Imzolangan .xpi nashr etilganda u Firefox'ga ikki marta bosib
+oʻrnatiladi.
+
+
+ESLATMA
+-------
+Kengaytma 100% oflayn ishlaydi — hech qanday maʼlumot internetga
+yuborilmaydi. Imlo, grammatika va lotin⇄kirill transliteratsiya
+to'g'ridan-to'g'ri brauzeringizda bajariladi.
+
+Loyiha: https://github.com/Erkinbek/UzSpell

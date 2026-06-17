@@ -8,17 +8,27 @@ public static class UzbekNumerals
 {
     private static readonly HashSet<string> Words = new(StringComparer.Ordinal)
     {
+        // Lotin
         "bir", "ikki", "uch", "toʻrt", "besh", "olti", "yetti", "sakkiz",
         "toʻqqiz", "oʻn", "yigirma", "oʻttiz", "qirq", "ellik", "oltmish",
         "yetmish", "sakson", "toʻqson", "yuz", "ming", "million", "milliard",
         "necha", "yarim",
+        // Kirill
+        "бир", "икки", "уч", "тўрт", "беш", "олти", "етти", "саккиз",
+        "тўққиз", "ўн", "йигирма", "ўттиз", "қирқ", "эллик", "олтмиш",
+        "етмиш", "саксон", "тўқсон", "юз", "минг", "миллион", "миллиард",
+        "неча", "ярим",
     };
 
     private static readonly HashSet<string> SpecialTaForms = new(StringComparer.Ordinal)
     {
         "bitta",   // bir → bitta
         "nechta",  // necha → nechta
+        "битта",
+        "нечта",
     };
+
+    private static readonly string[] TaSuffixes = { "ta", "та" };
 
     /// <summary>Sof son soʻzi yoki raqam (besh, oʻn, 25).</summary>
     public static bool IsNumberWord(string norm) =>
@@ -31,10 +41,14 @@ public static class UzbekNumerals
             return false;
         if (IsNumberWord(norm) || SpecialTaForms.Contains(norm))
             return true;
-        if (norm.Length > 2 && norm.EndsWith("ta", StringComparison.Ordinal))
+        foreach (var ta in TaSuffixes)
         {
-            string head = norm.Substring(0, norm.Length - 2);
-            return AllDigits(head) || Words.Contains(head);
+            if (norm.Length > ta.Length && norm.EndsWith(ta, StringComparison.Ordinal))
+            {
+                string head = norm.Substring(0, norm.Length - ta.Length);
+                if (AllDigits(head) || Words.Contains(head))
+                    return true;
+            }
         }
         return false;
     }

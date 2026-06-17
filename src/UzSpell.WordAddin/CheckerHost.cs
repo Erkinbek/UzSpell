@@ -26,12 +26,14 @@ internal sealed class CheckerHost
     public static CheckerHost Instance => _instance ??= Load();
 
     public UzbekSpellChecker Spell { get; }
-    public GrammarChecker Grammar { get; }
+    private readonly GrammarChecker _grammarLatin;
+    private readonly GrammarChecker? _grammarCyrillic;
 
-    private CheckerHost(UzbekSpellChecker spell, GrammarChecker grammar)
+    private CheckerHost(UzbekSpellChecker spell, GrammarChecker latin, GrammarChecker? cyrillic)
     {
         Spell = spell;
-        Grammar = grammar;
+        _grammarLatin = latin;
+        _grammarCyrillic = cyrillic;
     }
 
     private static CheckerHost Load()
@@ -41,8 +43,18 @@ internal sealed class CheckerHost
 
         var spell = new UzbekSpellChecker(dictDir);
         spell.WarmUp();
-        var grammar = GrammarChecker.CreateFromDictionary(dictDir, spell);
-        return new CheckerHost(spell, grammar);
+        var latin = GrammarChecker.CreateLatin(dictDir, spell);
+        var cyrillic = GrammarChecker.CreateCyrillic(dictDir, spell);
+        return new CheckerHost(spell, latin, cyrillic);
+    }
+
+    /// <summary>Hujjat yozuviga mos grammatika tekshiruvchisi.</summary>
+    private GrammarChecker GrammarFor(string text)
+    {
+        var script = Spell.ForcedScript ?? ScriptDetector.DetectDominant(text);
+        return script == UzbekScript.Cyrillic && _grammarCyrillic is not null
+            ? _grammarCyrillic
+            : _grammarLatin;
     }
 
     /// <summary>Hujjat matnini tekshirib, birlashtirilgan xatolar roʻyxatini qaytaradi.</summary>
@@ -66,7 +78,8 @@ internal sealed class CheckerHost
             });
         }
 
-        foreach (var group in Grammar.Check(text)
+        var grammarScript = Spell.ForcedScript ?? ScriptDetector.DetectDominant(text);
+        foreach (var group in GrammarFor(text).Check(text)
                      .GroupBy(i => (i.RuleId, Span: SafeSubstring(text, i.Start, i.Length))))
         {
             string span = group.Key.Span;
@@ -78,7 +91,7 @@ internal sealed class CheckerHost
             {
                 Text = span,
                 Normalized = span,
-                Script = UzbekScript.Latin,
+                Script = grammarScript,
                 IsGrammar = true,
                 Message = first.Message,
                 Occurrences = group.Count(),

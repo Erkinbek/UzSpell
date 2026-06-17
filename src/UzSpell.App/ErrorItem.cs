@@ -56,6 +56,10 @@ public sealed class ErrorItem : INotifyPropertyChanged
     public Visibility DictButtonVisibility =>
         IsGrammar ? Visibility.Collapsed : Visibility.Visible;
 
+    /// <summary>«Bir marta eʼtiborsiz» faqat tahrir rejimida (Word rejimida joylashuv yoʻq).</summary>
+    public Visibility IgnoreOnceVisibility =>
+        CheckVersion >= 0 ? Visibility.Visible : Visibility.Collapsed;
+
     public ObservableCollection<string> Suggestions { get; } = new();
 
     private bool _suggestionsLoaded;

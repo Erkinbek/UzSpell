@@ -59,24 +59,29 @@ public sealed class UzbekMorphology
     public bool IsVerbStem(string lowerWord) => _verbStems.Contains(lowerWord);
 
     /// <summary>
-    /// Soʻz ichidagi -lar qoʻshimchasini olib tashlashga urinadi:
+    /// Soʻz ichidagi koʻplik qoʻshimchasini (-lar / -лар) olib tashlashga urinadi:
     /// "kitoblar" → "kitob", "kitoblarni" → "kitobni".
     /// Oʻzak lugʻatda topilmasa null qaytaradi; larIndex — qoʻshimchaning oʻrni.
     /// </summary>
-    public string? TryRemovePlural(string lowerWord, out int larIndex)
+    public string? TryRemovePlural(string lowerWord, string pluralSuffix, out int larIndex)
     {
-        int idx = lowerWord.IndexOf("lar", StringComparison.Ordinal);
+        int len = pluralSuffix.Length;
+        int idx = lowerWord.IndexOf(pluralSuffix, StringComparison.Ordinal);
         while (idx > 0)
         {
             string stem = lowerWord.Substring(0, idx);
             if (_nominalStems.Contains(stem))
             {
                 larIndex = idx;
-                return stem + lowerWord.Substring(idx + 3);
+                return stem + lowerWord.Substring(idx + len);
             }
-            idx = lowerWord.IndexOf("lar", idx + 1, StringComparison.Ordinal);
+            idx = lowerWord.IndexOf(pluralSuffix, idx + 1, StringComparison.Ordinal);
         }
         larIndex = -1;
         return null;
     }
+
+    /// <summary>Eski chaqiruvlar uchun (lotin «-lar»).</summary>
+    public string? TryRemovePlural(string lowerWord, out int larIndex) =>
+        TryRemovePlural(lowerWord, "lar", out larIndex);
 }

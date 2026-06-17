@@ -28,4 +28,21 @@ public static class ScriptDetector
             return null;
         return cyrillic > latin ? UzbekScript.Cyrillic : UzbekScript.Latin;
     }
+
+    /// <summary>
+    /// Butun matndagi ustun yozuvni aniqlaydi (grammatikani toʻgʻri yozuvda
+    /// ishlatish uchun). Harf topilmasa Latin qaytaradi.
+    /// </summary>
+    public static UzbekScript DetectDominant(string text)
+    {
+        int latin = 0, cyrillic = 0;
+        foreach (char c in text)
+        {
+            if (c is >= 'a' and <= 'z' or >= 'A' and <= 'Z')
+                latin++;
+            else if (c is >= 'Ѐ' and <= 'ӿ')
+                cyrillic++;
+        }
+        return cyrillic > latin ? UzbekScript.Cyrillic : UzbekScript.Latin;
+    }
 }

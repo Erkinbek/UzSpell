@@ -17,8 +17,12 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _debounce;
     private readonly string _customWordsPath;
     private readonly HashSet<string> _ignoredGrammar = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _ignoredOnce = new(StringComparer.Ordinal);
 
-    private GrammarChecker? _grammar;
+    private AppSettings _settings = new();
+    private bool _initializing = true;
+    private GrammarChecker? _grammarLatin;
+    private GrammarChecker? _grammarCyrillic;
     private SquiggleAdorner? _adorner;
     private int _checkVersion;
     private bool _wordMode;
@@ -35,6 +39,16 @@ public partial class MainWindow : Window
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "UzSpell", "custom_words.txt");
         LoadCustomWords();
+
+        // Saqlangan sozlamalarni qoʻllaymiz (yozuv kombosi OnScriptChanged orqali ulanadi)
+        _settings = AppSettings.Load();
+        _checker.SkipAllCaps = !_settings.CheckAllCaps;
+        CmbScript.SelectedIndex = _settings.Script switch
+        {
+            UzbekScript.Latin => 1,
+            UzbekScript.Cyrillic => 2,
+            _ => 0,
+        };
 
         _debounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
         _debounce.Tick += (_, _) =>
@@ -88,14 +102,23 @@ public partial class MainWindow : Window
             lock (_gate)
             {
                 _checker.WarmUp();
-                _grammar = GrammarChecker.CreateFromDictionary(dictDir, _checker);
+                _grammarLatin = GrammarChecker.CreateLatin(dictDir, _checker);
+                _grammarCyrillic = GrammarChecker.CreateCyrillic(dictDir, _checker);
             }
         });
+        _initializing = false;
         LblStatus.Text = "Tayyor";
         RunCheck();
     }
 
     // ----- Tekshiruv -----
+
+    /// <summary>Matn ustun yozuviga (yoki tanlangan yozuvga) mos grammatika tekshiruvchisi.</summary>
+    private GrammarChecker? GrammarFor(string text)
+    {
+        var script = _checker.ForcedScript ?? ScriptDetector.DetectDominant(text);
+        return script == UzbekScript.Cyrillic ? _grammarCyrillic : _grammarLatin;
+    }
 
     private void OnTextChanged(object sender, TextChangedEventArgs e)
     {
@@ -122,7 +145,9 @@ public partial class MainWindow : Window
                 lock (_gate)
                 {
                     var spelling = _checker.CheckText(text);
-                    var grammar = _grammar?.Check(text) ?? new List<GrammarIssue>();
+                    var grammar = _settings.Grammar
+                        ? (GrammarFor(text)?.Check(text) ?? new List<GrammarIssue>())
+                        : new List<GrammarIssue>();
                     return (spelling, grammar);
                 }
             });
@@ -136,20 +161,24 @@ public partial class MainWindow : Window
         if (version != _checkVersion || _wordMode)
             return;
 
-        var items = result.Errors.Select(err => new ErrorItem
-        {
-            Word = err.Word,
-            Normalized = err.Normalized,
-            Start = err.Start,
-            Length = err.Length,
-            Script = err.Script,
-            CheckVersion = version,
-        }).ToList();
+        var items = result.Errors
+            .Where(err => !_ignoredOnce.Contains(OnceKey(false, err.Normalized, err.Start)))
+            .Select(err => new ErrorItem
+            {
+                Word = err.Word,
+                Normalized = err.Normalized,
+                Start = err.Start,
+                Length = err.Length,
+                Script = err.Script,
+                CheckVersion = version,
+            }).ToList();
 
         foreach (var issue in grammarIssues)
         {
             string span = SafeSubstring(text, issue.Start, issue.Length);
             if (_ignoredGrammar.Contains(GrammarKey(issue.RuleId, span)))
+                continue;
+            if (_ignoredOnce.Contains(OnceKey(true, issue.RuleId + "|" + span, issue.Start)))
                 continue;
 
             var item = new ErrorItem
@@ -178,7 +207,9 @@ public partial class MainWindow : Window
             items.Where(i => !i.IsGrammar).Select(i => (i.Start, i.Length)).ToList(),
             items.Where(i => i.IsGrammar).Select(i => (i.Start, i.Length)).ToList());
         int spellCount = items.Count(i => !i.IsGrammar);
-        LblStats.Text = $"Soʻzlar: {result.TotalWords} • Imlo: {spellCount} • Grammatika: {items.Count - spellCount}";
+        LblStats.Text =
+            $"Belgilar: {text.Length} • Soʻzlar: {result.TotalWords} • " +
+            $"Imlo xatosi: {spellCount} • Grammatika: {items.Count - spellCount}";
         LblStatus.Text = "Tayyor";
 
         _ = LoadSuggestionsAsync(items, version);
@@ -192,6 +223,11 @@ public partial class MainWindow : Window
     }
 
     private static string GrammarKey(string ruleId, string span) => ruleId + "|" + span;
+
+    /// <summary>«Bir marta eʼtiborsiz» kaliti — soʻz va joylashuviga bogʻlangan
+    /// (matn tahrirlangach joylashuv siljiydi va xato qayta paydo boʻladi).</summary>
+    private static string OnceKey(bool grammar, string id, int start) =>
+        (grammar ? "G:" : "S:") + id + "@" + start;
 
     private async Task LoadSuggestionsAsync(List<ErrorItem> items, int version)
     {
@@ -208,10 +244,11 @@ public partial class MainWindow : Window
         if (item.SuggestionsLoaded)
             return;
 
+        int max = _settings.MaxSuggestions;
         var suggestions = await Task.Run(() =>
         {
             lock (_gate)
-                return _checker.Suggest(item.Normalized, item.Script);
+                return _checker.Suggest(item.Normalized, item.Script, max);
         });
 
         item.Suggestions.Clear();
@@ -249,6 +286,18 @@ public partial class MainWindow : Window
         Editor.SelectedText = suggestion;
         Editor.CaretIndex = item.Start + suggestion.Length;
         Editor.Focus();
+    }
+
+    /// <summary>Faqat shu joydagi (bir martalik) xatoni eʼtiborsiz qoldiradi.</summary>
+    private void OnIgnoreOnceClick(object sender, RoutedEventArgs e)
+    {
+        var item = ItemFromTag(sender);
+        if (item is null || _wordMode)
+            return;
+
+        string id = item.IsGrammar ? (item.RuleId ?? "") + "|" + item.Word : item.Normalized;
+        _ignoredOnce.Add(OnceKey(item.IsGrammar, id, item.Start));
+        RunCheck();
     }
 
     private void OnIgnoreClick(object sender, RoutedEventArgs e)
@@ -353,7 +402,7 @@ public partial class MainWindow : Window
             else
             {
                 lock (_gate)
-                    suggestions = _checker.Suggest(item.Normalized, item.Script);
+                    suggestions = _checker.Suggest(item.Normalized, item.Script, _settings.MaxSuggestions);
             }
 
             if (suggestions.Count == 0)
@@ -382,7 +431,16 @@ public partial class MainWindow : Window
 
             menu.Items.Add(new Separator());
 
-            var ignore = new MenuItem { Header = "Eʼtiborsiz qoldirish" };
+            var ignoreOnce = new MenuItem { Header = "Bir marta eʼtiborsiz qoldirish" };
+            ignoreOnce.Click += (_, _) =>
+            {
+                string id = item.IsGrammar ? (item.RuleId ?? "") + "|" + item.Word : item.Normalized;
+                _ignoredOnce.Add(OnceKey(item.IsGrammar, id, item.Start));
+                RunCheck();
+            };
+            menu.Items.Add(ignoreOnce);
+
+            var ignore = new MenuItem { Header = "Hammasini eʼtiborsiz qoldirish" };
             ignore.Click += (_, _) =>
             {
                 if (item.IsGrammar)
@@ -510,16 +568,49 @@ public partial class MainWindow : Window
         if (_checker is null)
             return;
 
-        lock (_gate)
+        var script = CmbScript.SelectedIndex switch
         {
-            _checker.ForcedScript = CmbScript.SelectedIndex switch
-            {
-                1 => UzbekScript.Latin,
-                2 => UzbekScript.Cyrillic,
-                _ => null,
-            };
-        }
+            1 => UzbekScript.Latin,
+            2 => UzbekScript.Cyrillic,
+            _ => (UzbekScript?)null,
+        };
+        lock (_gate)
+            _checker.ForcedScript = script;
+
+        if (_initializing)
+            return;
+
+        _settings.Script = script;
+        _settings.Save();
         RunCheck();
+    }
+
+    // ----- Sozlamalar -----
+
+    private void OnSettings(object sender, RoutedEventArgs e)
+    {
+        var dlg = new SettingsWindow(_settings) { Owner = this };
+        if (dlg.ShowDialog() != true)
+            return;
+
+        _settings = dlg.Settings;
+        _settings.Save();
+
+        // Qoʻllaymiz
+        lock (_gate)
+            _checker.SkipAllCaps = !_settings.CheckAllCaps;
+
+        // Yozuvni kombo orqali sinxronlaymiz (OnScriptChanged ForcedScript'ni oʻrnatadi)
+        int idx = _settings.Script switch
+        {
+            UzbekScript.Latin => 1,
+            UzbekScript.Cyrillic => 2,
+            _ => 0,
+        };
+        if (CmbScript.SelectedIndex == idx)
+            RunCheck();         // kombo oʻzgarmadi — qoʻlda qayta tekshiramiz
+        else
+            CmbScript.SelectedIndex = idx; // OnScriptChanged RunCheck'ni chaqiradi
     }
 
     // ----- Microsoft Word integratsiyasi -----
@@ -563,7 +654,7 @@ public partial class MainWindow : Window
                 lock (_gate)
                 {
                     var spelling = _checker.CheckText(docText);
-                    var grammar = _grammar?.Check(docText) ?? new List<GrammarIssue>();
+                    var grammar = GrammarFor(docText)?.Check(docText) ?? new List<GrammarIssue>();
                     return (spelling, grammar);
                 }
             });

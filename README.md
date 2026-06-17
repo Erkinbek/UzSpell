@@ -12,6 +12,8 @@ asosida qurilgan, **100% oflayn** ishlaydigan imlo va grammatika tekshiruvchi. I
 | `src/UzSpell.WordAddin` | **Word lentasidagi haqiqiy add-in** — «UzSpell» boʻlimi, tugmalar, takliflar oynasi (COM, VSTO talab qilinmaydi) |
 | `src/UzSpell.Cli` | Terminal vositasi: fayl yoki stdin orqali tekshirish |
 | `extension/` | **Chrome/Firefox brauzer kengaytmasi** (oflayn, hunspell-asm WASM) — sahifa inputlarida **avtomatik** imlo/grammatika tekshiruvi (xatolar tagiga chiziladi), popup va transliteratsiya — [batafsil](extension/README.md) |
+| `vscode/` | **VS Code kengaytmasi** — imlo/grammatika diagnostikasi, tezkor tuzatish (Quick Fix) va transliteratsiya buyruqlari (oflayn, hunspell-asm) — [batafsil](vscode/README.md) |
+| `libreoffice/` | **LibreOffice/OpenOffice imlo lugʻati** (`.oxt`) — Writer, Calc va boshqalarda oʻzbekcha imlo — [batafsil](libreoffice/README.md) |
 | `uz-hunspell/` | Asl lugʻat fayllari (submodule) |
 | `dist/` | Tayyor Release fayllar |
 
@@ -60,12 +62,15 @@ dotnet run --project src\UzSpell.Cli -- namuna.txt
 - **Apostrof normalizatsiyasi** — `o'zbek`, `o`zbek`, `o‘zbek` kabi yozilishlar ham toʻgʻri deb qabul qilinadi
   (lugʻatdagi kanonik belgilar: `ʻ` U+02BB va tutuq `ʼ` U+02BC); takliflar kanonik koʻrinishda beriladi
 - **Juft soʻzlar** (`katta-katta`) va **son shakllari** (`beshta`, `1995-yil`) qoʻllab-quvvatlanadi
-- **Takliflar** — har bir xato uchun 6 tagacha tuzatish varianti
+- **Takliflar** — har bir xato uchun tuzatish variantlari, oʻzbekcha tipik xatolar
+  boʻyicha tartiblangan: lotinda `x↔h` (hato→xato), `oʻ↔o`/`gʻ↔g` (togri→toʻgʻri, ozbek→oʻzbek);
+  kirillda `х↔ҳ`, `қ↔к`, `ў↔у`, `ғ↔г`
 - **Shaxsiy lugʻat** — `%APPDATA%\UzSpell\custom_words.txt` ga doimiy saqlanadi
 - **BOSH HARFLI** qisqartmalar (AQSH, BMT) sukut boʻyicha tekshirilmaydi
 
 ### Grammatika (gap qurilishi)
-Lugʻatdagi morfologik maʼlumotdan foydalangan, yuqori aniqlikka moʻljallangan qoidalar:
+Lugʻatdagi morfologik maʼlumotdan foydalangan, yuqori aniqlikka moʻljallangan qoidalar.
+**Lotin va kirill** yozuvlarida ishlaydi (yozuv avtomatik aniqlanadi):
 
 | Qoida | Misol (xato → tuzatish) |
 |---|---|

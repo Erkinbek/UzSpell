@@ -13,7 +13,8 @@ public sealed class GrammarIssue
 }
 
 /// <summary>
-/// Gap qurilishi darajasidagi qoidalar mexanizmi (lotin yozuvi uchun):
+/// Gap qurilishi darajasidagi qoidalar mexanizmi. Lotin va kirill yozuvlarida
+/// bir xil mantiq bilan ishlaydi — yozuvga bogʻliq farqlar <see cref="GrammarProfile"/>da.
 ///  - koʻmakchilar bilan kelishik moslashuvi (darsdan keyin, uyga qadar)
 ///  - ega va kesimning shaxs-son moslashuvi (men keldim / men keldi)
 ///  - sondan keyin otning birlikda kelishi (beshta kitob / beshta kitoblar)
@@ -26,79 +27,41 @@ public sealed class GrammarChecker
 {
     private readonly UzbekMorphology _morph;
     private readonly Func<string, bool> _isCorrect;
+    private readonly GrammarProfile _p;
 
-    public GrammarChecker(UzbekMorphology morphology, Func<string, bool>? isCorrectWord = null)
+    public GrammarChecker(
+        UzbekMorphology morphology,
+        Func<string, bool>? isCorrectWord = null,
+        GrammarProfile? profile = null)
     {
         _morph = morphology;
         _isCorrect = isCorrectWord ?? (_ => false);
+        _p = profile ?? GrammarProfile.Latin();
     }
 
-    /// <summary>Lugʻat papkasi va imlo tekshiruvchidan grammatika tekshiruvchi yasaydi.</summary>
+    /// <summary>Lugʻat papkasi va imlo tekshiruvchidan lotin grammatika tekshiruvchisini yasaydi.</summary>
     public static GrammarChecker CreateFromDictionary(string dictionariesDir, UzbekSpellChecker spellChecker)
+        => CreateLatin(dictionariesDir, spellChecker);
+
+    /// <summary>Lotin yozuvi uchun grammatika tekshiruvchisi.</summary>
+    public static GrammarChecker CreateLatin(string dictionariesDir, UzbekSpellChecker spellChecker)
     {
         var morph = UzbekMorphology.LoadFromDic(Path.Combine(dictionariesDir, "uz_UZ.dic"));
         return new GrammarChecker(morph,
-            word => spellChecker.IsCorrect(word, UzbekScript.Latin, out _));
+            word => spellChecker.IsCorrect(word, UzbekScript.Latin, out _),
+            GrammarProfile.Latin());
     }
 
-    // ----- Lugʻaviy konstantalar (kanonik apostroflar bilan) -----
-
-    /// <summary>Chiqish kelishigini (-dan) talab qiladigan koʻmakchilar.</summary>
-    private static readonly HashSet<string> RequireDan = new(StringComparer.Ordinal)
+    /// <summary>Kirill yozuvi uchun grammatika tekshiruvchisi (kirill lugʻat boʻlsa).</summary>
+    public static GrammarChecker? CreateCyrillic(string dictionariesDir, UzbekSpellChecker spellChecker)
     {
-        "keyin", "soʻng", "buyon", "beri", "tashqari",
-    };
-
-    /// <summary>Joʻnalish kelishigini (-ga) talab qiladigan koʻmakchilar.</summary>
-    private static readonly HashSet<string> RequireGa = new(StringComparer.Ordinal)
-    {
-        "qadar", "koʻra", "binoan", "muvofiq", "qaramay", "qaramasdan",
-    };
-
-    /// <summary>Ega-kesim qoidasini oʻchirib qoʻyadigan soʻzlar (murakkab gap belgilari).</summary>
-    private static readonly HashSet<string> ComplexSentenceMarkers = new(StringComparer.Ordinal)
-    {
-        "va", "hamda", "yoki", "lekin", "ammo", "biroq", "bilan", "ki",
-        "chunki", "agar", "deb", "degan", "esa",
-    };
-
-    private static readonly HashSet<string> RepeatExclusions = new(StringComparer.Ordinal)
-    {
-        "u", "ha",
-    };
-
-    // Shaxs indekslari: 0=men 1=sen 2=biz 3=siz 4=u 5=ular
-    private static readonly Dictionary<string, int> SubjectPronouns = new(StringComparer.Ordinal)
-    {
-        ["men"] = 0, ["sen"] = 1, ["biz"] = 2, ["siz"] = 3, ["u"] = 4, ["ular"] = 5,
-    };
-
-    /// <summary>Tuslovchi qoʻshimcha oilalari: [men, sen, biz, siz, u, ular].</summary>
-    private static readonly string?[][] EndingFamilies =
-    {
-        new string?[] { "dim", "ding", "dik", "dingiz", "di", "dilar" },          // oddiy oʻtgan zamon
-        new string?[] { "aman", "asan", "amiz", "asiz", "adi", "adilar" },        // hozirgi-kelasi (-a)
-        new string?[] { "yman", "ysan", "ymiz", "ysiz", "ydi", "ydilar" },        // hozirgi-kelasi (-y)
-        new string?[] { "yapman", "yapsan", "yapmiz", "yapsiz", "yapti", "yaptilar" }, // hozirgi davom
-        new string?[] { "moqdaman", "moqdasan", "moqdamiz", "moqdasiz", "moqda", "moqdalar" },
-        new string?[] { "ganman", "gansan", "ganmiz", "gansiz", "gan", "ganlar" },     // oʻtgan zamon (-gan)
-        new string?[] { "sam", "sang", "sak", "sangiz", "sa", "salar" },          // shart mayli
-        // kesimlik: -siz va -dir ataylab yoʻq (yasovchi -siz bilan adashmaslik uchun)
-        new string?[] { "man", "san", "miz", null, null, null },
-    };
-
-    /// <summary>(suffiks, oila, shaxs) — uzunligi boʻyicha kamayish tartibida.</summary>
-    private static readonly List<(string Suffix, int Family, int Person)> SortedEndings = BuildSortedEndings();
-
-    private static List<(string, int, int)> BuildSortedEndings()
-    {
-        var list = new List<(string, int, int)>();
-        for (int f = 0; f < EndingFamilies.Length; f++)
-            for (int p = 0; p < EndingFamilies[f].Length; p++)
-                if (EndingFamilies[f][p] is { } s)
-                    list.Add((s, f, p));
-        list.Sort((a, b) => b.Item1.Length.CompareTo(a.Item1.Length));
-        return list;
+        string cyrlDic = Path.Combine(dictionariesDir, "uz_UZ_Cyrl.dic");
+        if (!File.Exists(cyrlDic))
+            return null;
+        var morph = UzbekMorphology.LoadFromDic(cyrlDic);
+        return new GrammarChecker(morph,
+            word => spellChecker.IsCorrect(word, UzbekScript.Cyrillic, out _),
+            GrammarProfile.Cyrillic());
     }
 
     // ----- Asosiy kirish nuqtasi -----
@@ -110,7 +73,7 @@ public sealed class GrammarChecker
         var tokens = new List<Token>(Tokenizer.Tokenize(text));
         var norms = new List<string>(tokens.Count);
         foreach (var t in tokens)
-            norms.Add(UzbekNormalizer.NormalizeToken(t.Text).ToLowerInvariant());
+            norms.Add(_p.Normalize(t.Text).ToLowerInvariant());
 
         bool isFirstSentence = true;
         foreach (var (from, to) in SplitSentences(text, tokens))
@@ -182,12 +145,12 @@ public sealed class GrammarChecker
 
     // ----- 1-qoida: takror soʻz -----
 
-    private static void CheckRepeatedWord(List<Token> tokens, List<string> norms, int i, List<GrammarIssue> issues)
+    private void CheckRepeatedWord(List<Token> tokens, List<string> norms, int i, List<GrammarIssue> issues)
     {
         string cur = norms[i];
         if (cur != norms[i - 1] || cur.Length < 2)
             return;
-        if (RepeatExclusions.Contains(cur) || UzbekNumerals.IsNumeral(cur))
+        if (_p.RepeatExclusions.Contains(cur) || UzbekNumerals.IsNumeral(cur))
             return;
 
         var prev = tokens[i - 1];
@@ -207,8 +170,8 @@ public sealed class GrammarChecker
     private void CheckPostpositionCase(List<Token> tokens, List<string> norms, int from, int i, List<GrammarIssue> issues)
     {
         string word = norms[i];
-        bool needDan = RequireDan.Contains(word);
-        bool needGa = !needDan && RequireGa.Contains(word);
+        bool needDan = _p.RequireDan.Contains(word);
+        bool needGa = !needDan && _p.RequireGa.Contains(word);
         if (!needDan && !needGa)
             return;
 
@@ -217,17 +180,17 @@ public sealed class GrammarChecker
 
         if (needDan)
         {
-            if (EndsWith(prev, "dan"))
+            if (EndsWith(prev, _p.DanSuffix))
                 return;
             // Faqat aniq ot oʻzagi (qoʻshimchasiz) boʻlsa xato deymiz
-            if (!_morph.IsNominalStem(prev) || SubjectPronouns.ContainsKey(prev))
+            if (!_morph.IsNominalStem(prev) || _p.SubjectPronouns.ContainsKey(prev))
                 return;
 
-            string suggestion = prevTok.Text + "dan";
+            string suggestion = prevTok.Text + _p.DanSuffix;
             issues.Add(new GrammarIssue
             {
                 RuleId = "KELISHIK-DAN",
-                Message = $"«{word}» koʻmakchisi chiqish kelishigini talab qiladi: «{prevTok.Text}dan {tokens[i].Text}»",
+                Message = $"«{word}» koʻmakchisi chiqish kelishigini talab qiladi: «{prevTok.Text}{_p.DanSuffix} {tokens[i].Text}»",
                 Start = prevTok.Start,
                 Length = prevTok.Length,
                 Suggestions = _isCorrect(suggestion) ? new[] { suggestion } : Array.Empty<string>(),
@@ -235,34 +198,21 @@ public sealed class GrammarChecker
         }
         else
         {
-            if (EndsWith(prev, "ga") || EndsWith(prev, "ka") || EndsWith(prev, "qa"))
+            if (_p.HasDativeEnding(prev))
                 return;
-            if (!_morph.IsNominalStem(prev) || SubjectPronouns.ContainsKey(prev))
+            if (!_morph.IsNominalStem(prev) || _p.SubjectPronouns.ContainsKey(prev))
                 return;
 
-            string suggestion = BuildDative(prevTok.Text);
+            string suggestion = _p.BuildDative(prevTok.Text);
             issues.Add(new GrammarIssue
             {
                 RuleId = "KELISHIK-GA",
-                Message = $"«{word}» koʻmakchisi joʻnalish kelishigini talab qiladi: «{BuildDative(prevTok.Text)} {tokens[i].Text}»",
+                Message = $"«{word}» koʻmakchisi joʻnalish kelishigini talab qiladi: «{suggestion} {tokens[i].Text}»",
                 Start = prevTok.Start,
                 Length = prevTok.Length,
                 Suggestions = _isCorrect(suggestion) ? new[] { suggestion } : Array.Empty<string>(),
             });
         }
-    }
-
-    /// <summary>Otga joʻnalish kelishigi qoʻshimchasini toʻgʻri shaklda qoʻshadi.</summary>
-    private static string BuildDative(string stem)
-    {
-        string lower = stem.ToLowerInvariant();
-        if (EndsWith(lower, "gʻ"))
-            return stem.Substring(0, stem.Length - 2) + "qqa"; // bogʻ → boqqa
-        if (EndsWith(lower, "k"))
-            return stem + "ka"; // koʻylak → koʻylakka
-        if (EndsWith(lower, "q"))
-            return stem + "qa"; // qishloq → qishloqqa
-        return stem + "ga";
     }
 
     // ----- 3-qoida: son + koʻplik -----
@@ -277,7 +227,7 @@ public sealed class GrammarChecker
             return;
 
         // "5 ta kitoblar" — oradagi alohida "ta" ni ham qoplaymiz
-        if (norms[j] == "ta")
+        if (norms[j] == _p.TaWord)
         {
             j++;
             if (j >= to)
@@ -288,7 +238,7 @@ public sealed class GrammarChecker
         if (noun.Length < 5)
             return;
 
-        string? singular = _morph.TryRemovePlural(noun, out int larIndex);
+        string? singular = _morph.TryRemovePlural(noun, _p.PluralSuffix, out int larIndex);
         if (singular is null)
             return;
 
@@ -301,7 +251,7 @@ public sealed class GrammarChecker
         }
 
         string raw = tokens[j].Text;
-        string suggestion = raw.Remove(larIndex, 3);
+        string suggestion = raw.Remove(larIndex, _p.PluralSuffix.Length);
         issues.Add(new GrammarIssue
         {
             RuleId = "SON-BIRLIK",
@@ -316,7 +266,7 @@ public sealed class GrammarChecker
 
     private void CheckStandaloneMi(string text, List<Token> tokens, List<string> norms, int i, List<GrammarIssue> issues)
     {
-        if (norms[i] != "mi")
+        if (norms[i] != _p.MiParticle)
             return;
 
         var prev = tokens[i - 1];
@@ -327,8 +277,8 @@ public sealed class GrammarChecker
             if (text[g] != ' ')
                 return;
 
-        string joined = prev.Text + "mi";
-        string joinedNorm = norms[i - 1] + "mi";
+        string joined = prev.Text + _p.MiParticle;
+        string joinedNorm = norms[i - 1] + _p.MiParticle;
         if (!_isCorrect(joinedNorm))
             return;
 
@@ -352,14 +302,14 @@ public sealed class GrammarChecker
 
         // Ega — gapning birinchi yoki ikkinchi soʻzi boʻlgan kishilik olmoshi
         int subjIdx = -1;
-        if (SubjectPronouns.ContainsKey(norms[from]))
+        if (_p.SubjectPronouns.ContainsKey(norms[from]))
             subjIdx = from;
-        else if (count > 2 && SubjectPronouns.ContainsKey(norms[from + 1]))
+        else if (count > 2 && _p.SubjectPronouns.ContainsKey(norms[from + 1]))
             subjIdx = from + 1;
         if (subjIdx < 0)
             return;
 
-        int subjPerson = SubjectPronouns[norms[subjIdx]];
+        int subjPerson = _p.SubjectPronouns[norms[subjIdx]];
         int last = to - 1;
         if (last <= subjIdx)
             return;
@@ -368,10 +318,11 @@ public sealed class GrammarChecker
         for (int i = subjIdx + 1; i < last; i++)
         {
             string w = norms[i];
-            if (ComplexSentenceMarkers.Contains(w))
+            if (_p.ComplexSentenceMarkers.Contains(w))
                 return;
-            if (EndsWith(w, "gan") || EndsWith(w, "kan") || EndsWith(w, "qan") || EndsWith(w, "digan"))
-                return;
+            foreach (var ptcp in _p.ParticipleSuffixes)
+                if (EndsWith(w, ptcp))
+                    return;
         }
 
         string final = norms[last];
@@ -397,7 +348,7 @@ public sealed class GrammarChecker
         var suggestions = new List<string>();
         string stem = final.Substring(0, final.Length - suffix.Length);
         int targetPerson = subjPerson == 5 ? 4 : subjPerson;
-        if (EndingFamilies[family][targetPerson] is { } target)
+        if (_p.EndingFamilies[family][targetPerson] is { } target)
         {
             string rawStem = tokens[last].Text.Substring(0, tokens[last].Text.Length - suffix.Length);
             string candidate = rawStem + target;
@@ -422,7 +373,7 @@ public sealed class GrammarChecker
         if (_morph.IsNominalStem(word) || _morph.IsVerbStem(word))
             return null;
 
-        foreach (var (suffix, family, person) in SortedEndings)
+        foreach (var (suffix, family, person) in _p.SortedEndings)
         {
             if (word.Length >= suffix.Length + 2 && EndsWith(word, suffix))
                 return (family, person, suffix);

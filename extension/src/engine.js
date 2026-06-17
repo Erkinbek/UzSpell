@@ -7,6 +7,7 @@ import {
   buildMorphology, SCRIPT_LATIN, SCRIPT_CYRILLIC,
 } from './core.js';
 import { checkGrammar } from './grammar.js';
+import { refineSuggestions } from './suggest.js';
 
 // fetchBuf(path) => Promise<Uint8Array>  (kengaytma ichidagi faylni oʻqiydi)
 export function createEngine({ fetchBuf }) {
@@ -69,13 +70,14 @@ export function createEngine({ fetchBuf }) {
     const forced = opts.script || 'auto';
     const withSug = opts.suggestions !== false;
     const withGram = opts.grammar !== false;
+    const checkAllCaps = opts.checkAllCaps === true;
     const ignored = opts.ignored || new Set();
     const errors = [];
 
     // ---- Imlo ----
     for (const tok of tokenize(text)) {
       if (tok.length < 2) continue;
-      if (/^[\p{Lu}]{2,}$/u.test(tok.text)) continue; // BOSH HARFLI qisqartmalar
+      if (!checkAllCaps && /^[\p{Lu}]{2,}$/u.test(tok.text)) continue; // BOSH HARFLI qisqartmalar
       const script = forced === 'auto'
         ? detectScript(tok.text)
         : (forced === 'latin' ? SCRIPT_LATIN : SCRIPT_CYRILLIC);
@@ -90,7 +92,12 @@ export function createEngine({ fetchBuf }) {
       if (ignored.has(norm)) continue;
       if (!engine.isCorrect(tok.text)) {
         const sugEngine = script === SCRIPT_LATIN ? latin.spell : cyrillic.spell;
-        const sugs = withSug ? sugEngine.suggest(norm).slice(0, 6) : [];
+        const max = opts.maxSuggestions || 6;
+        // Hunspell'dan kengroq roʻyxat olib, oʻzbekcha chalkashliklar boʻyicha qayta tartiblaymiz
+        const raw = withSug ? sugEngine.suggest(norm).slice(0, max * 3) : [];
+        const sugs = withSug
+          ? refineSuggestions(norm, script, raw, (w) => sugEngine.spell(w), max)
+          : [];
         errors.push({
           type: 'spell', word: tok.text, normalized: norm,
           start: tok.start, length: tok.length, script, suggestions: sugs,

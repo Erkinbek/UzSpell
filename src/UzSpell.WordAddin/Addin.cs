@@ -58,6 +58,16 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
     private dynamic? _app;
     private ErrorsForm? _form;
 
+    // Chop etishda vaqtincha olib turish uchun joriy belgilar roʻyxati.
+    // ErrorsForm ham shu roʻyxatga ishlaydi — bitta havola boʻlgani uchun
+    // almashtirish/oʻchirish avtomatik sinxron qoladi.
+    private List<ErrorEntry>? _lastEntries;
+
+    // DocumentBeforePrint hodisasiga ulanish (connection point).
+    private PrintEventSink? _printSink;
+    private IConnectionPoint? _printConnectionPoint;
+    private int _printCookie;
+
     /// <summary>
     /// Add-in to'g'ri yuklanganini tashqaridan (masalan PowerShell COM orqali)
     /// tekshirish uchun: lugʻat va grammatikani yuklab, namunani tekshiradi.
@@ -87,6 +97,7 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
         {
             _app = Application;
             AddinLog.Write("OnConnection: _app saqlandi, OK");
+            HookPrintEvents(Application);
         }
         catch (Exception ex)
         {
@@ -96,6 +107,7 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
 
     public void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
     {
+        UnhookPrintEvents();
         try
         {
             _form?.Close();
@@ -105,7 +117,73 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
             // yopilish vaqtida xatoga eʼtibor bermaymiz
         }
         _form = null;
+        _lastEntries = null;
         _app = null;
+    }
+
+    // ----- Chop etishda belgilarni vaqtincha yashirish -----
+
+    /// <summary>Hozir hujjatda olib turilishi kerak boʻlgan belgilar bormi.</summary>
+    internal bool HasPrintMarks => _app is not null && _lastEntries is { Count: > 0 };
+
+    /// <summary>Chop etishdan oldin barcha UzSpell belgilarini olib qoʻyadi.</summary>
+    internal void RemoveMarksForPrint()
+    {
+        if (_app is null || _lastEntries is null)
+            return;
+        foreach (var entry in _lastEntries)
+        {
+            try { WordMarker.Unmark(_app, entry); }
+            catch { /* bitta belgilash muvaffaqiyatsiz boʻlsa davom etamiz */ }
+        }
+    }
+
+    /// <summary>Chop etib boʻlgach belgilarni ekranga qaytaradi.</summary>
+    internal void RestoreMarksAfterPrint()
+    {
+        if (_app is null || _lastEntries is null)
+            return;
+        foreach (var entry in _lastEntries)
+        {
+            try { WordMarker.Mark(_app, entry); }
+            catch { /* davom etamiz */ }
+        }
+    }
+
+    private void HookPrintEvents(object application)
+    {
+        try
+        {
+            var container = (IConnectionPointContainer)application;
+            var iid = typeof(IWordApplicationEvents4).GUID;
+            container.FindConnectionPoint(ref iid, out var cp);
+            _printSink = new PrintEventSink(this);
+            cp.Advise(_printSink, out _printCookie);
+            _printConnectionPoint = cp;
+            AddinLog.Write($"Print hodisasi ulandi (cookie={_printCookie})");
+        }
+        catch (Exception ex)
+        {
+            // Ulanmasa ham add-in ishlashda davom etadi — shunchaki belgilar
+            // chop etishda olib turilmaydi (avvalgi xatti-harakat).
+            AddinLog.Write("Print hodisasiga ulanib boʻlmadi: " + ex.Message);
+        }
+    }
+
+    private void UnhookPrintEvents()
+    {
+        try
+        {
+            if (_printConnectionPoint is not null && _printCookie != 0)
+                _printConnectionPoint.Unadvise(_printCookie);
+        }
+        catch
+        {
+            // uzilishda xatoga eʼtibor bermaymiz
+        }
+        _printConnectionPoint = null;
+        _printSink = null;
+        _printCookie = 0;
     }
 
     public void OnAddInsUpdate(ref Array custom) { }
@@ -199,6 +277,7 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
                 return;
             Cursor.Current = Cursors.WaitCursor;
             WordMarker.ClearAllMarks(_app);
+            _lastEntries = null; // tozalangach chop etishda qaytariladigan narsa yoʻq
         }
         catch (Exception ex)
         {
@@ -318,6 +397,7 @@ public class Addin : IDTExtensibility2, IRibbonExtensibility
             var host = CheckerHost.Instance;
             string text = WordMarker.GetDocumentText(_app);
             entries = host.CheckDocument(text, out totalWords);
+            _lastEntries = entries; // chop etishda olib turish uchun saqlaymiz
 
             foreach (var entry in entries)
             {

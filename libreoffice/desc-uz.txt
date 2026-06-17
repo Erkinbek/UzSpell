@@ -1,0 +1,3 @@
+UzSpell — oʻzbek tili uchun imlo lugʻati (lotin va kirill yozuvlari).
+uz-hunspell lugʻatlari asosida (95 000+ soʻz). LibreOffice Writer, Calc va boshqa
+modullarda oʻzbekcha matnlarning imlosini avtomatik tekshiradi. 100% oflayn.

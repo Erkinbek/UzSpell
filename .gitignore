@@ -21,3 +21,7 @@ extension/dist/
 extension/engine-test/
 # Store paketlari (Releases sahifasiga yuklanadi, repo'da emas)
 extension/store/
+
+# Installer staging (yigʻilgan modullar; Setup.exe -> dist/)
+installer/staging/
+installer/*.log

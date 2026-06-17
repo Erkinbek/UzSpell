@@ -1,0 +1,3 @@
+UzSpell — Uzbek spelling dictionary (Latin and Cyrillic scripts).
+Based on the uz-hunspell dictionaries (95,000+ words). Provides automatic spell
+checking of Uzbek text in LibreOffice Writer, Calc and other modules. 100% offline.

@@ -109,8 +109,11 @@ foreach (var error in result.Errors)
 int grammarCount = 0;
 if (!noGrammar)
 {
-    var grammar = GrammarChecker.CreateFromDictionary(dictDir, checker);
-    var issues = grammar.Check(text);
+    var grammarScript = forcedScript ?? ScriptDetector.DetectDominant(text);
+    var grammar = grammarScript == UzbekScript.Cyrillic
+        ? GrammarChecker.CreateCyrillic(dictDir, checker)
+        : GrammarChecker.CreateLatin(dictDir, checker);
+    var issues = grammar?.Check(text) ?? new List<GrammarIssue>();
     grammarCount = issues.Count;
     foreach (var issue in issues)
     {

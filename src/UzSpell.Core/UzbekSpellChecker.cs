@@ -145,13 +145,21 @@ public sealed class UzbekSpellChecker
         return false;
     }
 
-    /// <summary>Notoʻgʻri soʻz uchun takliflar.</summary>
+    /// <summary>
+    /// Notoʻgʻri soʻz uchun takliflar. Hunspell nomzodlari oʻzbek tiliga xos
+    /// chalkashliklar (x↔h, oʻ↔o, gʻ↔g, ў↔у, қ↔к) boʻyicha qayta tartiblanadi.
+    /// </summary>
     public IReadOnlyList<string> Suggest(string normalizedWord, UzbekScript script, int max = 6)
     {
         var wordList = GetWordList(script);
         if (wordList is null)
             return Array.Empty<string>();
-        return wordList.Suggest(normalizedWord).Take(max).ToList();
+
+        // Qayta tartiblash uchun Hunspell'dan kengroq roʻyxat olamiz
+        var raw = wordList.Suggest(normalizedWord).Take(max * 3).ToList();
+        return UzbekSuggester.Refine(
+            normalizedWord, script, raw,
+            candidate => wordList.Check(candidate), max);
     }
 
     private static bool IsAllUpper(string word)
